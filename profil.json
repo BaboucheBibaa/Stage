@@ -1,0 +1,12 @@
+{
+    "nom": "Lucas",
+    "age":"20",
+    "passions":[
+        "Tennis de table",
+        "Natation",
+        "Jeux vidéos"
+    ],
+    "sujets_sensibles": [
+        
+    ]
+}
