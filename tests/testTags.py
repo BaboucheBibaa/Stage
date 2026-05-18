@@ -43,7 +43,7 @@ dataset = [
     }
 ]
 
-def normalize(tags):
+def normaliser(tags):
     return set([t.lower() for t in tags])
 
 all_true = []
@@ -53,7 +53,7 @@ results = []
 
 for item in dataset:
     text = item["text"]
-    expected = normalize(item["expected"])
+    expected = normaliser(item["expected"])
 
     result = ToTag(text)
     predicted = set()
@@ -61,12 +61,12 @@ for item in dataset:
     for key in ["emotion", "domain", "state", "needs"]:
         predicted.update([t.lower() for t in result.result.get(key, [])])
 
-    tp = len(predicted & expected)
+    vp = len(predicted & expected)
     fp = len(predicted - expected)
     fn = len(expected - predicted)
 
-    precision = tp / (tp + fp + 1e-9)
-    recall = tp / (tp + fn + 1e-9)
+    precision = vp / (vp + fp + 1e-9)
+    recall = vp / (vp + fn + 1e-9)
     f1 = 2 * precision * recall / (precision + recall + 1e-9)
 
     results.append({

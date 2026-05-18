@@ -1,0 +1,202 @@
+from bd import Database
+from dataclasses import dataclass
+from datetime import datetime
+
+@dataclass
+class Message:
+    id_message: int
+    date_message: datetime
+    contenu: str
+    role_message: str  # 'USER' ou 'ASSISTANT'
+    id_conversation: int
+    tags: list[str] = None
+
+@dataclass
+class Conversation:
+    id_conversation: int
+    sujet: str
+    id_profil: int
+    id_compagnon: int
+    messages: list[Message] = None
+
+class GestionConversation:
+    def __init__(self):
+        self.db = Database()
+    
+    def create_conversation(self, id_profil: int, id_compagnon: int, sujet: str) -> int:
+        """Crée une nouvelle conversation"""
+        try:
+            self.db.execute(
+                "INSERT INTO Conversation (ID_Profil, ID_Compagnon, Sujet) "
+                "VALUES (?, ?, ?)",
+                (id_profil, id_compagnon, sujet)
+            )
+            result = self.db.executeFetch(
+                "SELECT ID_Conversation FROM Conversation "
+                "WHERE ID_Profil = ? AND ID_Compagnon = ? "
+                "ORDER BY ID_Conversation DESC LIMIT 1",
+                (id_profil, id_compagnon)
+            )
+            #retourne l'ID de la conversation créé.
+            return result[0][0] if result else None
+        except Exception as e:
+            print(f"Erreur lors de la création de la conversation: {e}")
+            return None
+    
+    def get_conversation(self, id_conversation: int) -> Conversation:
+        """Récupère une conversation complète avec tous ses messages"""
+        try:
+            result = self.db.executeFetch(
+                "SELECT ID_Conversation, Sujet, ID_Profil, ID_Compagnon "
+                "FROM Conversation WHERE ID_Conversation = ?",
+                (id_conversation,)
+            )
+            if result:
+                data = result[0]
+                messages = self._get_conversation_messages(id_conversation)
+                return Conversation(
+                    id_conversation=data[0],
+                    sujet=data[1],
+                    id_profil=data[2],
+                    id_compagnon=data[3],
+                    messages=messages
+                )
+        except Exception as e:
+            print(f"Erreur lors de la récupération de la conversation: {e}")
+        return None
+    
+    def _get_conversation_messages(self, id_conversation: int) -> list[Message]:
+        """Récupère tous les messages d'une conversation"""
+        try:
+            result = self.db.executeFetch(
+                "SELECT ID_Message, Date_Message, Contenu, Role_Message, ID_Conversation "
+                "FROM Messages WHERE ID_Conversation = ? "
+                "ORDER BY Date_Message ASC",
+                (id_conversation,)
+            )
+            messages = []
+            for row in result:
+                tags = self._get_message_tags(row[0])
+                messages.append(Message(
+                    id_message=row[0],
+                    date_message=row[1],
+                    contenu=row[2],
+                    role_message=row[3],
+                    id_conversation=row[4],
+                    tags=tags
+                ))
+            return messages
+        except Exception as e:
+            print(f"Erreur lors de la récupération des messages: {e}")
+            return []
+    
+    def _get_message_tags(self, id_message: int) -> list[str]:
+        """Récupère les tags associés à un message"""
+        try:
+            result = self.db.executeFetch(
+                "SELECT T.NomTag FROM Tag T "
+                "JOIN Est_Associe EA ON T.ID_Tag = EA.ID_Tag "
+                "WHERE EA.ID_Message = ?",
+                (id_message,)
+            )
+            return [row[0] for row in result]
+        except Exception as e:
+            print(f"Erreur lors de la récupération des tags: {e}")
+            return []
+    
+    def add_message(self, id_conversation: int, role_message: str, contenu: str, tags: list[str] = None) -> int:
+        """Ajoute un message à une conversation"""
+        try:
+            # Valider le rôle
+            if role_message not in ['USER', 'ASSISTANT']:
+                print("Le rôle doit être 'USER' ou 'ASSISTANT'")
+                return None
+            
+            self.db.execute(
+                "INSERT INTO Messages (Role_Message, Date_Message, Contenu, ID_Conversation) "
+                "VALUES (?, ?, ?, ?)",
+                (role_message, datetime.now(), contenu, id_conversation)
+            )
+            
+            # Récupère l'ID du message inséré
+            result = self.db.executeFetch(
+                "SELECT ID_Message FROM Messages WHERE ID_Conversation = ? "
+                "ORDER BY Date_Message DESC LIMIT 1",
+                (id_conversation,)
+            )
+            
+            if result and tags:
+                id_message = result[0][0]
+                self._associer_messages_et_tags(id_message, tags)
+            
+            return result[0][0] if result else None
+        except Exception as e:
+            print(f"Erreur lors de l'ajout du message: {e}")
+            return None
+    
+    def _associer_messages_et_tags(self, id_message: int, tags: list[str]):
+        """Associe les tags à un message"""
+        try:
+            for tag in tags:
+                # Récupère ou crée le tag
+                result = self.db.executeFetch(
+                    "SELECT ID_Tag FROM Tag WHERE NomTag = ?",
+                    (tag,)
+                )
+                
+                if result:
+                    id_tag = result[0][0]
+                if id_tag:
+                    # Associe le tag au message
+                    self.db.execute(
+                        "INSERT INTO Est_Associe (ID_Message, ID_Tag) VALUES (?, ?)",
+                        (id_message, id_tag)
+                    )
+        except Exception as e:
+            print(f"Erreur lors de l'association des tags: {e}")
+    
+    def get_recent_conversations(self, id_profil: int, limit: int = 10) -> list[Conversation]:
+        """Récupère les conversations récentes d'un utilisateur"""
+        try:
+            result = self.db.executeFetch(
+                "SELECT ID_Conversation, Sujet, ID_Profil, ID_Compagnon "
+                "FROM Conversation WHERE ID_Profil = ? "
+                "ORDER BY ID_Conversation DESC LIMIT ?",
+                (id_profil, limit)
+            )
+            conversations = []
+            for row in result:
+                conversations.append(Conversation(
+                    id_conversation=row[0],
+                    sujet=row[1],
+                    id_profil=row[2],
+                    id_compagnon=row[3]
+                ))
+            return conversations
+        except Exception as e:
+            print(f"Erreur lors de la récupération des conversations: {e}")
+            return []
+    
+    def update_conversation_subject(self, id_conversation: int, nouveau_sujet: str) -> bool:
+        """Met à jour le sujet d'une conversation"""
+        try:
+            self.db.execute(
+                "UPDATE Conversation SET Sujet = ? WHERE ID_Conversation = ?",
+                (nouveau_sujet, id_conversation)
+            )
+            return True
+        except Exception as e:
+            print(f"Erreur lors de la mise à jour du sujet: {e}")
+            return False
+    
+    def delete_conversation(self, id_conversation: int) -> bool:
+        """Supprime une conversation et ses messages"""
+        try:
+            self.db.execute(
+                "DELETE FROM Conversation WHERE ID_Conversation = ?",
+                (id_conversation,)
+            )
+            return True
+        except Exception as e:
+            print(f"Erreur lors de la suppression de la conversation: {e}")
+            return False

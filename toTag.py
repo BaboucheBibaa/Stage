@@ -1,22 +1,18 @@
 from litellm import completion
-from json import loads,dumps,load
-from formattage import Formattage
+from json import loads,dumps
 from bd import Database
 
 class ToTag:
     def __init__(self, message: str):
         #message original
         self.original_message = message
-        #message réduit après passage sous réducteur
-        self.message_reduit = Formattage(self.original_message).message
-        self.tags_list = self.__load_tags_config()
+        self.__tags_list = self.__load_tags_config()
         #dump du json des tags
-        self.tags_autorises = dumps(self.tags_list, ensure_ascii=False)
+        self.__tags_autorises = dumps(self.__tags_list, ensure_ascii=False)
         self.result = self._classification()
-
         self._confirmation()
 
-        self.message = dumps(
+        self.donnees = dumps(
             self.result,
             ensure_ascii=False,
             indent=2
@@ -37,34 +33,73 @@ class ToTag:
     #Retourne sous forme de JSON la liste des données utiles pour gérer un message via des tags.
     def _classification(self):
 
-        prompt = f"""
-            Tu es un système expert de classification émotionnelle et contextuelle.
+        prompt = """
+            Tu es un assistant spécialisé dans l’analyse conversationnelle.
 
-            Ta mission :
-            Analyser un message utilisateur et l’associer STRICTEMENT aux tags fournis en prenant UNIQUEMENT les idées explicites ou fortement implicites.
+            OBJECTIF :
+            Analyser les messages utilisateur pour produire des sorties
+            structurées exploitables par un moteur mémoire long terme.
 
-            RÈGLES IMPORTANTES :
-            - Tu dois inférer le contexte implicite (ex : examen, soutenance = Études + Pression)
-            - Ne jamais inventer de tags
-            - Ne pas proposer de needs si aucun besoin implicite clair.
-            - si implicite, n’ajoute qu’un seul tag le plus probable.
-            - max 1–2 tags par champ sauf si explicitement multiple
-            - Si aucun tag pertinent : liste vide
-            - Retour JSON strict uniquement
-            - Le JSON doit contenir obligatoirement 6 champs : intensite, emotion, etat, domaines, besoins, contexte.
-            - Le champ intensite contient UN SEUL tag ou AUCUN si c'est pertinent.
+            RÈGLES GÉNÉRALES :
 
-            LOGIQUE ATTENDUE :
-            - intensite = importance du message pour l'utilisateur
-            - emotion = ressenti interne (stress, joie, anxiété...)
-            - etat = état global (fatigue, pression, motivation...)
-            - domaines = domaine de vie concerné
-            - besoins = besoin implicite de l'utilisateur
-            - contexte = contexte concerné par le message
+            - Répondre de façon précise et concise
+            - Ne jamais inventer d’informations absentes
+            - Préférer [] à une inférence incertaine
+            - Respecter strictement les formats JSON demandés
+            - Aucun texte hors JSON si JSON demandé
+            - Conserver le sens émotionnel réel
+            - Ne pas surinterpréter les salutations
+            - Si le message est neutre, retourner des listes vides
 
-            TAGS DISPONIBLES :
-            {self.tags_autorises}
-            """
+            CLASSIFICATION :
+
+            Tags autorisés :
+            - intensite
+            - emotion
+            - etat
+            - domaines
+            - besoins
+            - contexte
+
+            INTENSITÉ :
+
+            Neutre: 
+            discussion sans importance
+            
+            Faible :
+            indices légers
+
+            Normale :
+            impact réel
+
+            Élevée :
+            détresse notable
+
+            Critique :
+            urgence immédiate
+
+            RÈGLES D’INFÉRENCE :
+
+            - Santé physique ≠ tristesse
+            - Douleur prolongée → santé + réassurance
+            - Stress lié examen → études + pression
+            - Solitude explicite → isolement + soutien émotionnel
+            - Réussite → progrès + fierté
+
+            VALIDATION :
+
+            Si sortie invalide :
+            retourner :
+
+            {
+            'intensite': []
+            'emotion': [],
+            'etat': [],
+            'domaines': [],
+            'besoins': [],
+            'contexte': [],
+            }
+            TAGS DISPONIBLES :"""+self.__tags_autorises
         try:
 
             response = completion(
@@ -88,13 +123,14 @@ class ToTag:
             return loads(content)
 
         except Exception as e:
+            print(e)
             #Retourne json vide
             return {
-                "intensity": "Normale",
-                "domain": [],
-                "state": [],
+                "intensite": "Normale",
+                "domaines": [],
+                "etat": [],
                 "emotion": [],
-                "needs": [],
+                "besoins": [],
                 "contexte": []
             }
     def _confirmation(self):
@@ -104,6 +140,7 @@ class ToTag:
             "etat",
             "emotion",
             "besoins",
+            "contexte"
         ]
 
         for key in required:
@@ -140,7 +177,7 @@ class ToTag:
     #Vérifie si une liste est valide ou non.
     def _validate_list(self, values, category):
         allowed = set(
-            self.tags_list.get(category, [])
+            self.__tags_list.get(category, [])
         )
 
         if not isinstance(values, list):

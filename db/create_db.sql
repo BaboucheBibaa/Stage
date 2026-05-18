@@ -1,3 +1,5 @@
+-- Script de création de la base de données pour le compagnon virtuel
+
 CREATE TABLE IF NOT EXISTS Profil (
     ID_Profil INT PRIMARY KEY AUTO_INCREMENT,
     Nom VARCHAR(50),
@@ -27,7 +29,6 @@ CREATE TABLE IF NOT EXISTS Compagnon_Virtuel (
     ID_Compagnon INT PRIMARY KEY AUTO_INCREMENT,
     Personnalite TEXT,
     Modele VARCHAR(100)
-
 );
 
 CREATE TABLE IF NOT EXISTS Tag(
@@ -87,7 +88,7 @@ CREATE TABLE IF NOT EXISTS MLT(
 );
 
 CREATE TABLE IF NOT EXISTS Est_Associe (
-    ID_Message INT NOT NULL ,
+    ID_Message INT NOT NULL,
     ID_Tag INT NOT NULL,
     PRIMARY KEY (ID_Message, ID_Tag),
 
@@ -95,3 +96,35 @@ CREATE TABLE IF NOT EXISTS Est_Associe (
     CONSTRAINT fk_EA_tag FOREIGN KEY (ID_Tag) REFERENCES Tag(ID_Tag)
 );
 
+-- Données de test
+INSERT INTO Profil (Nom, Prenom, Date_Naissance) VALUES 
+('Dupont', 'Jean', '1990-05-15'),
+('Martin', 'Marie', '1992-08-20');
+
+INSERT INTO Compagnon_Virtuel (Personnalite, Modele) VALUES 
+('Compagnon virtuel empathique, patient et bienveillant', 'ollama/mistral'),
+('Assistant créatif et dynamique', 'ollama/neural-chat');
+
+INSERT INTO Preferences (ID_Profil, Sujet, Niveau) VALUES 
+(1, 'Technologie', 8),
+(1, 'Sport', 7),
+(1, 'Cinéma', 6),
+(2, 'Musique', 9),
+(2, 'Littérature', 8);
+
+INSERT INTO Sujets_Sensibles (ID_Profil, Sujet, Niveau) VALUES 
+(1, 'Politique', 7),
+(1, 'Santé mentale', 8),
+(2, 'Finances', 6);
+
+INSERT INTO Tag (NomTag, Categorie) VALUES 
+('technologie', 'sujet'),
+('santé', 'sujet'),
+('événement', 'type'),
+('rappel', 'type');
+
+INSERT INTO Tag_Actions (ID_Tag, Action) VALUES 
+(1, 'envoyer une notification'),
+(2, 'alerter l\'utilisateur'),
+(3, 'créer un rappel'),
+(4, 'programmer une notification');

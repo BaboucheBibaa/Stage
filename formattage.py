@@ -11,7 +11,7 @@ class Formattage:
     """
 
     def __init__(self, message: str):
-        self.raw_message = message
+        self.message = message
         self.features = self.__extract_features(message)
         self.message = self.__generate_output()
     #Analyse sémantique
@@ -63,29 +63,17 @@ Tu es un système de mémoire.
 
 Tu DOIS reformuler le message afin de garder uniquement les informations importantes.
 
-L'analyse sémantique a permis d'extraire ces données :
-{self.features}
-La phrase que tu dois créer DOIT utiliser les noms
-
 RÈGLES STRICTES :
-- Aucune explication
+- La phrase doit commencer par "L'utilisateur"
+- Aucune explication.
+- utilise uniquement les mots exacts du message original, sans synonymes, pas d’ajouts
 - Ne jamais inventer d’informations
 - Fais UNIQUEMENT une phrase
-
-
-EXEMPLE :
-
-INPUT:
-J'ai été manger avec un ami hier soir, ça faisait si longtemps que je ne l'avais pas vu ! On a été manger kebab.
-
-OUTPUT:
-L'utilisateur a été manger hier soir avec un ami qu'il n'avait pas vu depuis longtemps.
-
 """                },
                 {
                     "role": "user",
                     "content": dumps({
-                        "message": self.raw_message,
+                        "message": self.message,
                     }, ensure_ascii=False)
                 }
             ]
