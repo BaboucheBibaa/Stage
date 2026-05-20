@@ -1,6 +1,9 @@
 from bd import Database
 from dataclasses import dataclass
 from datetime import datetime
+import spacy
+
+nlp = spacy.load("fr_core_news_md")
 
 @dataclass
 class Message:
@@ -16,6 +19,7 @@ class Conversation:
     id_conversation: int
     sujet: str
     id_profil: int
+    date_creation: datetime
     id_compagnon: int
     messages: list[Message] = None
 
@@ -23,13 +27,26 @@ class GestionConversation:
     def __init__(self):
         self.db = Database()
     
+    def switch_conv(message1: str,message2: str,seuil=0.45) -> bool:
+        """Retourne si la conversation a été changée entre deux messages ou non, via une analyse sémantique.
+
+        Args:
+            message1 (str): Premier message
+            message2 (str): Second message
+            seuil (float, optional): Seuil à partir duquel on considère qu'il n'y a aucune similarité entre deux messages. Defaults to 0.45.
+
+        Returns:
+            bool: True si similarité détectée, False sinon.
+        """
+        return True if (nlp(message1).similarity(nlp(message2)) < seuil) else False
+    
     def create_conversation(self, id_profil: int, id_compagnon: int, sujet: str) -> int:
         """Crée une nouvelle conversation"""
         try:
             self.db.execute(
-                "INSERT INTO Conversation (ID_Profil, ID_Compagnon, Sujet) "
-                "VALUES (?, ?, ?)",
-                (id_profil, id_compagnon, sujet)
+                "INSERT INTO Conversation (ID_Profil, ID_Compagnon,Date_Creation, Sujet) "
+                "VALUES (?, ?, ?, ?)",
+                (id_profil, id_compagnon, datetime.now(), sujet)
             )
             result = self.db.executeFetch(
                 "SELECT ID_Conversation FROM Conversation "
@@ -47,19 +64,20 @@ class GestionConversation:
         """Récupère une conversation complète avec tous ses messages"""
         try:
             result = self.db.executeFetch(
-                "SELECT ID_Conversation, Sujet, ID_Profil, ID_Compagnon "
+                "SELECT ID_Conversation, Sujet, ID_Profil, Date_Creation, ID_Compagnon "
                 "FROM Conversation WHERE ID_Conversation = ?",
                 (id_conversation,)
             )
             if result:
                 data = result[0]
-                messages = self._get_conversation_messages(id_conversation)
+                msg = self._get_conversation_messages(id_conversation)
                 return Conversation(
                     id_conversation=data[0],
                     sujet=data[1],
                     id_profil=data[2],
-                    id_compagnon=data[3],
-                    messages=messages
+                    date_creation=data[3],
+                    id_compagnon=data[4],
+                    messages=msg
                 )
         except Exception as e:
             print(f"Erreur lors de la récupération de la conversation: {e}")
@@ -146,32 +164,32 @@ class GestionConversation:
                 
                 if result:
                     id_tag = result[0][0]
-                if id_tag:
-                    # Associe le tag au message
-                    self.db.execute(
-                        "INSERT INTO Est_Associe (ID_Message, ID_Tag) VALUES (?, ?)",
-                        (id_message, id_tag)
-                    )
+                    if id_tag:
+                        # Associe le tag au message
+                        self.db.execute(
+                            "INSERT INTO Est_Associe (ID_Message, ID_Tag) VALUES (?, ?)",
+                            (id_message, id_tag)
+                        )
         except Exception as e:
             print(f"Erreur lors de l'association des tags: {e}")
     
-    def get_recent_conversations(self, id_profil: int, limit: int = 10) -> list[Conversation]:
+    def get_recent_conversations(self, id_profil: int, limit: int = 10) -> list[dict[str,str | list[str]]]:
         """Récupère les conversations récentes d'un utilisateur"""
         try:
             result = self.db.executeFetch(
-                "SELECT ID_Conversation, Sujet, ID_Profil, ID_Compagnon "
-                "FROM Conversation WHERE ID_Profil = ? "
-                "ORDER BY ID_Conversation DESC LIMIT ?",
+                "SELECT ID_Conversation, Sujet, ID_Profil,Date_Creation, ID_Compagnon FROM Conversation WHERE ID_Profil = ? ORDER BY ID_Conversation DESC LIMIT ?",
                 (id_profil, limit)
             )
+            
             conversations = []
             for row in result:
-                conversations.append(Conversation(
-                    id_conversation=row[0],
-                    sujet=row[1],
-                    id_profil=row[2],
-                    id_compagnon=row[3]
-                ))
+                unformatted_liste = self.db.executeFetch("select contenu from messages where id_conversation = ?", (row[0],))
+                liste_messages = [elt[0] for elt in unformatted_liste]
+                conversations.append({
+                    "sujet":row[1],
+                    "date_creation":str(row[3]),
+                    "messages": liste_messages
+                })
             return conversations
         except Exception as e:
             print(f"Erreur lors de la récupération des conversations: {e}")

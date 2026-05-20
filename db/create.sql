@@ -25,9 +25,11 @@ CREATE TABLE IF NOT EXISTS Sujets_Sensibles(
 
 CREATE TABLE IF NOT EXISTS Compagnon_Virtuel (
     ID_Compagnon INT PRIMARY KEY AUTO_INCREMENT,
-    Personnalite TEXT,
-    Modele VARCHAR(100)
-
+    Modele VARCHAR(100),
+    Empathie FLOAT(1,1),
+    Humour FLOAT(1,1),
+    Professionalisme FLOAT(1,1),
+    Patience FLOAT(1,1)
 );
 
 CREATE TABLE IF NOT EXISTS Tag(
@@ -41,13 +43,14 @@ CREATE TABLE IF NOT EXISTS Tag_Actions(
     Action VARCHAR(70),
     ID_Tag INT NOT NULL,
 
-    CONSTRAINT fk_tagAction_tag FOREIGN KEY (ID_Tag) REFERENCES Tag(ID_Tag)
+    CONSTRAINT fk_tagAction_tag FOREIGN KEY (ID_Tag) REFERENCES Tag(ID_Tag) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS Conversation(
     ID_Conversation INT PRIMARY KEY AUTO_INCREMENT,
     Sujet TEXT,
     ID_Profil INT NOT NULL,
+    Date_Creation DATETIME,
     ID_Compagnon INT NOT NULL,
 
     CONSTRAINT fk_conversation_profil FOREIGN KEY (ID_Profil) REFERENCES Profil(ID_Profil) ON DELETE CASCADE,
@@ -95,3 +98,6 @@ CREATE TABLE IF NOT EXISTS Est_Associe (
     CONSTRAINT fk_EA_tag FOREIGN KEY (ID_Tag) REFERENCES Tag(ID_Tag)
 );
 
+INSERT INTO Profil (Nom,Prenom,Date_Naissance) VALUES ('Delcroix','Lucas','2005-09-11');
+INSERT INTO Preferences (Sujet,Niveau,ID_Profil) VALUES ('Jeux vidéos',0.7,1);
+INSERT INTO Compagnon_Virtuel (Modele, Empathie, Professionalisme, Patience, Humour) VALUES ('mistral', 0.7, 0.8, 0.9, 0.6);

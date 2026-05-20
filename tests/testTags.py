@@ -59,7 +59,7 @@ for item in dataset:
     predicted = set()
 
     for key in ["emotion", "domain", "state", "needs"]:
-        predicted.update([t.lower() for t in result.result.get(key, [])])
+        predicted.update([t.lower() for t in result.donnees.get(key, [])])
 
     vp = len(predicted & expected)
     fp = len(predicted - expected)
@@ -85,7 +85,6 @@ avg_precision = sum(r["precision"] for r in results) / len(results)
 avg_recall = sum(r["recall"] for r in results) / len(results)
 avg_f1 = sum(r["f1"] for r in results) / len(results)
 
-print("\nRESULTATS GLOBAUX")
-print(f"Precision moyenne : {avg_precision:.2f}")
-print(f"Recall moyen      : {avg_recall:.2f}")
-print(f"F1-score moyen    : {avg_f1:.2f}")
+print(f"Precision : {avg_precision:.2f}")
+print(f"Recall       : {avg_recall:.2f}")
+print(f"F1-score    : {avg_f1:.2f}")

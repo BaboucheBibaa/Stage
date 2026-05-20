@@ -9,15 +9,11 @@ class ToTag:
         self.__tags_list = self.__load_tags_config()
         #dump du json des tags
         self.__tags_autorises = dumps(self.__tags_list, ensure_ascii=False)
-        self.result = self._classification()
+        self.__result = self._classification()
         self._confirmation()
 
-        self.donnees = dumps(
-            self.result,
-            ensure_ascii=False,
-            indent=2
-        )
-
+    def toString(self):
+        return self.__result
     #Extrait la liste des tags proposés par défaut. L'IA se basera uniquement sur cette liste de tags.
     def __load_tags_config(self):
         json = {}
@@ -33,12 +29,14 @@ class ToTag:
     #Retourne sous forme de JSON la liste des données utiles pour gérer un message via des tags.
     def _classification(self):
 
-        prompt = """
+        prompt = f"""
             Tu es un assistant spécialisé dans l’analyse conversationnelle.
 
             OBJECTIF :
             Analyser les messages utilisateur pour produire des sorties
             structurées exploitables par un moteur mémoire long terme.
+
+            TAGS DISPONIBLES : {self.__tags_autorises}
 
             RÈGLES GÉNÉRALES :
 
@@ -53,19 +51,16 @@ class ToTag:
 
             CLASSIFICATION :
 
-            Tags autorisés :
+            Tags à mettre obligatoirement :
             - intensite
             - emotion
             - etat
             - domaines
             - besoins
             - contexte
-
-            INTENSITÉ :
-
-            Neutre: 
-            discussion sans importance
             
+            INTENSITÉ :
+                        
             Faible :
             indices légers
 
@@ -91,15 +86,15 @@ class ToTag:
             Si sortie invalide :
             retourner :
 
-            {
+            
             'intensite': []
             'emotion': [],
             'etat': [],
             'domaines': [],
             'besoins': [],
             'contexte': [],
-            }
-            TAGS DISPONIBLES :"""+self.__tags_autorises
+            
+            """
         try:
 
             response = completion(
@@ -144,33 +139,33 @@ class ToTag:
         ]
 
         for key in required:
-            if key not in self.result:
+            if key not in self.__result:
                 raise ValueError(
-                    f"Sortie invalide : clé manquante {key}"
+                    f"Sortie invalide : {self.__result}"
                 )
         # Validation stricte des listes
-        self.result["domaines"] = self._validate_list(
-            self.result["domaines"],
+        self.__result["domaines"] = self._validate_list(
+            self.__result["domaines"],
             "domaines"
         )
 
-        self.result["etat"] = self._validate_list(
-            self.result["etat"],
+        self.__result["etat"] = self._validate_list(
+            self.__result["etat"],
             "etat"
         )
 
-        self.result["emotion"] = self._validate_list(
-            self.result["emotion"],
+        self.__result["emotion"] = self._validate_list(
+            self.__result["emotion"],
             "emotion"
         )
 
-        self.result["besoins"] = self._validate_list(
-            self.result["besoins"],
+        self.__result["besoins"] = self._validate_list(
+            self.__result["besoins"],
             "besoins"
         )
         
-        self.result["contexte"] = self._validate_list(
-            self.result["contexte"],
+        self.__result["contexte"] = self._validate_list(
+            self.__result["contexte"],
             "contexte"
         )
         

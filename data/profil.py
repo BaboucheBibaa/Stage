@@ -45,7 +45,7 @@ class GestionProfil:
                 "SELECT Sujet, Niveau FROM Preferences WHERE ID_Profil = ?",
                 (id_profil,)
             )
-            return {row[0]: row[1] for row in result}
+            return {row[0]: "forte" if row[1] >= 0.7 else "moyenne" if row[1] >= 0.5 else "faible" if row[1] >= 0.3 else "très faible" for row in result}
         except Exception as e:
             print(f"Erreur lors de la récupération des préférences: {e}")
             return {}
