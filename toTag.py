@@ -30,70 +30,50 @@ class ToTag:
     def _classification(self):
 
         prompt = f"""
-            Tu es un assistant spécialisé dans l’analyse conversationnelle.
+            Tu es un classificateur strict.
 
-            OBJECTIF :
-            Analyser les messages utilisateur pour produire des sorties
-            structurées exploitables par un moteur mémoire long terme.
+            MISSION :
+            Associer un message utilisateur à des tags existants uniquement.
 
-            TAGS DISPONIBLES : {self.__tags_autorises}
+            TAGS AUTORISÉS :
+            {self.__tags_autorises}
 
-            RÈGLES GÉNÉRALES :
+            RÈGLE ABSOLUE :
+            Un tag retourné doit exister EXACTEMENT dans cette liste.
 
-            - Répondre de façon précise et concise
-            - Ne jamais inventer d’informations absentes
-            - Préférer [] à une inférence incertaine
-            - Respecter strictement les formats JSON demandés
-            - Aucun texte hors JSON si JSON demandé
-            - Conserver le sens émotionnel réel
-            - Ne pas surinterpréter les salutations
-            - Si le message est neutre, retourner des listes vides
+            Interdiction de :
+            - créer un tag
+            - reformuler
+            - spécialiser
+            - fusionner des tags
 
-            CLASSIFICATION :
+            Si aucun tag exact ne correspond :
+            retourner []
 
-            Tags à mettre obligatoirement :
-            - intensite
-            - emotion
-            - etat
-            - domaines
-            - besoins
-            - contexte
-            
-            INTENSITÉ :
-                        
-            Faible :
-            indices légers
+            FORMAT UNIQUE :
 
-            Normale :
-            impact réel
+            {{
+            "intensite": [],
+            "emotion": [],
+            "etat": [],
+            "domaines": [],
+            "besoins": [],
+            "contexte": []
+            }}
 
-            Élevée :
-            détresse notable
+            Toujours inclure les 6 clés.
 
-            Critique :
-            urgence immédiate
+            Aucun texte hors JSON.
 
-            RÈGLES D’INFÉRENCE :
+            Ne pas interpréter au-delà du message explicite.
 
-            - Santé physique ≠ tristesse
-            - Douleur prolongée → santé + réassurance
-            - Stress lié examen → études + pression
-            - Solitude explicite → isolement + soutien émotionnel
-            - Réussite → progrès + fierté
+            Ne pas surinterpréter une salutation.
 
-            VALIDATION :
+            Si message neutre :
+            toutes listes vides.
 
-            Si sortie invalide :
-            retourner :
-
-            
-            'intensite': []
-            'emotion': [],
-            'etat': [],
-            'domaines': [],
-            'besoins': [],
-            'contexte': [],
-            
+            Vérification finale :
+            supprimer tout tag absent de TAGS AUTORISÉS.
             """
         try:
 
@@ -114,7 +94,6 @@ class ToTag:
             )
 
             content = response.choices[0].message.content.strip()
-
             return loads(content)
 
         except Exception as e:
@@ -182,3 +161,9 @@ class ToTag:
             v for v in values
             if v in allowed
         ]
+        
+def main():
+    tag = ToTag("explique moi le fonctionnement d'une IA")
+    print(tag.toString())
+if __name__ == '__main__':
+    main()

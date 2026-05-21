@@ -121,6 +121,14 @@ class GestionConversation:
         except Exception as e:
             print(f"Erreur lors de la récupération des tags: {e}")
             return []
+        
+    def get_tag_actions(self,list_tag: list[str]) -> list[str]:
+        requete = "SELECT Action FROM Tag_Actions WHERE ID_Tag IN (SELECT ID_Tag FROM Tag WHERE NomTag = ?)"
+        result = []
+        for tag in list_tag:
+            tag_actions = self.db.executeFetch(requete,(tag,))
+            result.extend([elt[0] for elt in tag_actions])
+        return result
     
     def add_message(self, id_conversation: int, role_message: str, contenu: str, tags: list[str] = None) -> int:
         """Ajoute un message à une conversation"""
@@ -142,7 +150,6 @@ class GestionConversation:
                 "ORDER BY Date_Message DESC LIMIT 1",
                 (id_conversation,)
             )
-            
             if result and tags:
                 id_message = result[0][0]
                 self._associer_messages_et_tags(id_message, tags)
