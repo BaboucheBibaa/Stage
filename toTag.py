@@ -1,6 +1,6 @@
 from litellm import completion
 from json import loads,dumps
-from bd import Database
+from db.bd import Database
 
 class ToTag:
     def __init__(self, message: str):
