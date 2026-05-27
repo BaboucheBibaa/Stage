@@ -30,12 +30,13 @@ Récupérer un message généré par un assistant virtuel et en extraire les inf
 
 RÈGLES STRICTES :
 
-- Répond en commencant par "l'assistant à dit"
-- Une seule phrase
-- Extrais uniquement le sens utile retenu
-- Ne jamais inventer d'information
+- Adapte ta formulation au fait que c'est le message d'un assistant virtuel.
+- Résume le message en une seule phrase.
+- Extrais le sens utile retenu
+- Ne jamais inventer d'informations
 - Ignore politesse et contexte inutile
-- Sois synthétique, naturel et exploitable comme mémoire
+- Sois synthétique, naturel
+- Contente toi uniquement de résumer le message. N'ajoute aucun commentaire.
 """
                 },
                 {
@@ -46,7 +47,6 @@ RÈGLES STRICTES :
                 }
             ]
         )
-
         return response.choices[0].message.content.strip()
 
 
