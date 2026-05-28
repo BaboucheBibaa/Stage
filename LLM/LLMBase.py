@@ -29,11 +29,7 @@ class BaseLLMClient(ABC):
         self.max_tokens = max_tokens
 
     @abstractmethod
-    def send(
-        self,
-        messages: list[Message],
-        system_prompt: str = None,
-    ) -> LLMResponse:
+    def send(self,messages: list[Message],system_prompt: str = None,) -> LLMResponse:
         """
         Envoie une liste de messages et retourne une réponse normalisée.
         C'est la seule méthode que le reste du projet appelle.

@@ -1,9 +1,0 @@
-llm:
-  model: mistral
-  temperature: 0.7
-  max_tokens: 512 
- 
-companion:
-  name: "Apagnan"
-  language: "fr"
-  proactive_interval_minutes: 60

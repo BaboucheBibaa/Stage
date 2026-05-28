@@ -18,7 +18,6 @@ class OllamaClient(BaseLLMClient):
         if system_prompt:
             api_messages.append({"role": "system", "content": system_prompt})
         api_messages += [{"role": m.role, "content": m.content} for m in messages]
-
         response = self._ollama.chat(
             model=self.model,
             messages=api_messages,

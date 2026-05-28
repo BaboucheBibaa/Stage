@@ -501,12 +501,11 @@ class DonneesMCT:
             for r in rows
         ]
 
-    def nettoyage(self, id_profil: int, keep: int = 20) -> None:
+    def nettoyage(self, id_profil: int, conserver: int = 20) -> None:
         """Nettoie la MCT en conservant seulement les K entrées les plus récentes
-
         Args:
             id_profil (int): Identifiant du profil
-            keep (int): Nombre d'entrées à conserver (défaut: 20)
+            conserver (int): Nombre d'entrées à conserver (défaut: 20)
 
         Returns:
             None

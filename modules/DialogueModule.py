@@ -3,7 +3,7 @@ from data.modeles import Conversation, Message, MCT
 from LLM.LLMBase import Message as LLMMessage, BaseLLMClient
 from prompts.prompt_loader import build_system_prompt
 import data.dataclasses as dt
-
+from .resume import resumer_echange, resumer_session
 MCT_WINDOW = 10  # Garder les 10 derniers messages en mémoire court terme
 
 class DialogueModule:
@@ -37,7 +37,6 @@ class DialogueModule:
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
         system_prompt = self._build_system_prompt()
-        
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
         self._historique.append(LLMMessage(role="user", content=message_user))
         
@@ -93,7 +92,7 @@ class DialogueModule:
     def _mettre_a_jour_mct(self, msg_user: str, rep_assistant: str) -> None:
         """Met à jour la mémoire court terme (MCT)"""
         self.mct_repo.create(MCT(
-            message=f"[User] {msg_user} | [Assistant] {rep_assistant}",
+            message=resumer_echange(self.llm, msg_user,rep_assistant),
             id_profil=self.id_profil,
             date_creation=datetime.now(),
         ))
@@ -101,7 +100,7 @@ class DialogueModule:
         self.mct_repo.nettoyage(self.id_profil, keep=MCT_WINDOW)
 
     @staticmethod
-    def _calculer_age(date_naissance) -> int:
+    def _calculer_age(date_naissance : datetime) -> int:
         """Calcule l'âge à partir de la date de naissance"""
         today = datetime.today()
         return today.year - date_naissance.year - (

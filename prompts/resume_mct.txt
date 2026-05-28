@@ -1,0 +1,4 @@
+Résume le sujet principal de cet échange:
+
+User: {msg_user}
+Assistant: {rep_assistant}

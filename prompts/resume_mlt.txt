@@ -1,0 +1,9 @@
+Mets à jour le profil utilisateur basé sur la conversation:
+
+Profil existant:
+{mlt_existante}
+
+Nouvelle conversation:
+{historique}
+
+Profil mis à jour:
