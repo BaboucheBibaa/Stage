@@ -1,9 +1,5 @@
-Mets à jour le profil utilisateur basé sur la conversation:
+Voici les notes de la journée sur l'utilisateur.
+Regroupe-les par thème, résume chaque groupe en 1-2 phrases.
+Retourne uniquement les résumés, un par ligne.
 
-Profil existant:
-{mlt_existante}
-
-Nouvelle conversation:
-{historique}
-
-Profil mis à jour:
+{liste_messages}

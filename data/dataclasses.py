@@ -11,6 +11,7 @@ de CRUD (Create, Read, Update, Delete) ou de requêtes spécifiques.
 
 from .bd import Database
 from .modeles import Conversation, Profil, Preference, Message, MLT, MCT, SujetSensible, CompagnonVirtuel, Evenement
+from datetime import datetime
 
 class DonneesProfil:
     """Classe permettant de gérer les données du profil au sein d'une BD.
@@ -480,7 +481,7 @@ class DonneesMCT:
         )
         return result
     
-    def getRecentes(self, id_profil: int, limit: int = 10) -> list[MCT]:
+    def getToday(self, id_profil: int) -> list[MCT]:
         """Récupère les N échanges les plus récents d'un profil
 
         Args:
@@ -491,9 +492,9 @@ class DonneesMCT:
             list[MCT]: Liste des échanges récents, triés par date décroissante (plus récent en premier)
         """
         rows = self._db.executeFetch(
-            """SELECT * FROM MCT WHERE ID_Profil = ?
-                ORDER BY Date_Creation DESC LIMIT ?""",
-            (id_profil, limit),
+            """SELECT * FROM MCT WHERE ID_Profil = ? AND DATE(Date_Creation) = ? 
+                ORDER BY Date_Creation DESC""",
+            (id_profil, str(datetime.today())),
         )
         return [
             MCT(id=r["ID_MCT"], message=r["Message"],

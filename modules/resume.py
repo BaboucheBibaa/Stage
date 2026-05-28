@@ -33,7 +33,6 @@ def resumer_session(llm : BaseLLMClient, historique: list[Message], mlt_existant
     historique : liste de LLMMessage de la session courante
     mlt_existante : texte de la dernière MLT en base (peut être vide)
     """
-    # Reconstruction de l'historique en texte lisible
     lignes = []
     for msg in historique:
         lignes.append("user :" +msg.msg_user)
@@ -41,7 +40,7 @@ def resumer_session(llm : BaseLLMClient, historique: list[Message], mlt_existant
     historique_texte = "\n".join(lignes)
 
     if not historique_texte.strip():
-        return mlt_existante  # rien à résumer si la session est vide
+        return mlt_existante
 
     prompt = _charger("resume_mlt.txt").format(
         mlt_existante=mlt_existante or "Aucune fiche existante.",

@@ -7,7 +7,7 @@ from data.dataclasses import (
 )
 from LLM.ollama_config import OllamaClient
 from modules.DialogueModule import DialogueModule
-from modules.resume import resumer_echange
+from modules.resume import resumer_session
 
 ID_PROFIL = 1
 SEPARATEUR = "-" * 50
@@ -30,12 +30,11 @@ def boucle_chat(dm: DialogueModule):
         if not user_input:
             continue
         if user_input.lower() in ("quit", "exit", "q"):
+            print(resumer_session(dm.compagnon, dm.mct_repo.getToday(), dm.mlt_repo.getRecente(1)))
             print("Au revoir !")
             break
         reponse = dm.chat(user_input)
         print(f"Réponse : {reponse}\n")
-        llm = OllamaClient()
-        print("Résumé : "+resumer_echange(llm, user_input,reponse))
 
 def main():
     with open("config.yaml") as f:
@@ -69,7 +68,6 @@ def main():
         print(f"ERREUR — {e}")
         return
     boucle_chat(dm)
-
 
 if __name__ == "__main__":
     main()

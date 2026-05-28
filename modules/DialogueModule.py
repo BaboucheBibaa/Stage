@@ -67,7 +67,7 @@ class DialogueModule:
             preferences=self.prefs,
             sujets_sensibles=self.sensibles,
             mlt_text=self.mlt.text if self.mlt else "",
-            mct_list=self.mct_repo.getRecentes(self.id_profil, MCT_WINDOW),
+            mct_list=self.mct_repo.getToday(self.id_profil),
         )
 
     def _nouvelle_conversation(self) -> int:
@@ -97,7 +97,7 @@ class DialogueModule:
             date_creation=datetime.now(),
         ))
         # Garder seulement les N derniers messages
-        self.mct_repo.nettoyage(self.id_profil, keep=MCT_WINDOW)
+        self.mct_repo.nettoyage(self.id_profil, conserver=MCT_WINDOW)
 
     @staticmethod
     def _calculer_age(date_naissance : datetime) -> int:
