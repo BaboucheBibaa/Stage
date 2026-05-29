@@ -494,7 +494,7 @@ class DonneesMCT:
         rows = self._db.executeFetch(
             """SELECT * FROM MCT WHERE ID_Profil = ? AND DATE(Date_Creation) = ? 
                 ORDER BY Date_Creation DESC""",
-            (id_profil, str(datetime.today())),
+            (id_profil, str(datetime.date(datetime.now()))),
         )
         return [
             MCT(id=r["ID_MCT"], message=r["Message"],
@@ -502,13 +502,13 @@ class DonneesMCT:
             for r in rows
         ]
 
-    def nettoyage(self, id_profil: int, conserver: int = 20) -> None:
+    def nettoyage(self, id_profil: int) -> None:
         """Nettoie la MCT en conservant seulement les K entrées les plus récentes
         Args:
             id_profil (int): Identifiant du profil
             conserver (int): Nombre d'entrées à conserver (défaut: 20)
-
         Returns:
             None
         """
-        pass
+        self._db.execute("DELETE FROM MCT WHERE ID_Profil = ?",(id_profil,))
+        

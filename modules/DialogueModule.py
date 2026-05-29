@@ -1,5 +1,5 @@
 from datetime import datetime
-from data.modeles import Conversation, Message, MCT
+from data.modeles import Conversation, Message, MCT, MLT
 from LLM.LLMBase import Message as LLMMessage, BaseLLMClient
 from prompts.prompt_loader import build_system_prompt
 import data.dataclasses as dt
@@ -50,9 +50,8 @@ class DialogueModule:
         # Ajouter la réponse à l'historique
         self._historique.append(LLMMessage(role="assistant", content=reponse_texte))
         
-        # Persister les données
         self._sauvegarder_message(message_user, reponse_texte)
-        self._mettre_a_jour_mct(message_user, reponse_texte)
+        self._add_MCT(message_user, reponse_texte)
         
         return reponse_texte
 
@@ -88,17 +87,27 @@ class DialogueModule:
             id_conversation=self._id_conversation,
             date_creation=datetime.now(),
         ))
+    def sauvegarder_MLT(self, id_profil : int):
+        #récupération de la discussion de la journée
+        historique = self.mct_repo.getToday(id_profil)
+        #création de l'enregistrement de la mémoire long terme avec les données
+        if self.mlt_repo.create(MLT(
+            id_profil=self.id_profil,
+            date_creation=str(datetime.date(datetime.now())),
+            #résumé JSON de toute la discussion
+            text = resumer_session(self.llm,historique)
+        )):
+            #si ça a bien été créé, alors on vide la MCT.
+            self.mct_repo.nettoyage(id_profil)
 
-    def _mettre_a_jour_mct(self, msg_user: str, rep_assistant: str) -> None:
-        """Met à jour la mémoire court terme (MCT)"""
-        self.mct_repo.create(MCT(
+    def _add_MCT(self, msg_user: str, rep_assistant: str) -> None:
+        """Ajoute une donnée dans la mémoire court terme (MCT)"""
+        res= self.mct_repo.create(MCT(
             message=resumer_echange(self.llm, msg_user,rep_assistant),
             id_profil=self.id_profil,
             date_creation=datetime.now(),
         ))
-        # Garder seulement les N derniers messages
-        self.mct_repo.nettoyage(self.id_profil, conserver=MCT_WINDOW)
-
+        print("ID MCT retourné : "+ str(res))
     @staticmethod
     def _calculer_age(date_naissance : datetime) -> int:
         """Calcule l'âge à partir de la date de naissance"""

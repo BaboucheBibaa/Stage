@@ -4,8 +4,8 @@ Utilisé par le DialogueManager pour alimenter la MCT et la MLT.
 """
 
 from pathlib import Path
-from LLM.LLMBase import BaseLLMClient
-from data.modeles import Message
+from LLM.LLMBase import BaseLLMClient, LLMResponse
+from data.modeles import MCT
 
 _PROMPTS = Path(__file__).parent / "../" "prompts"
 
@@ -25,7 +25,7 @@ def resumer_echange(llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> s
     return llm.send_simple(prompt).strip()
 
 
-def resumer_session(llm : BaseLLMClient, historique: list[Message], mlt_existante: str) -> str:
+def resumer_session(llm : BaseLLMClient, historique: list[MCT], mlt_existante: str) -> str:
     """
     Résume toute la session pour mettre à jour la MLT.
     Appelé en fin de conversation (quand l'utilisateur quitte).
@@ -35,15 +35,13 @@ def resumer_session(llm : BaseLLMClient, historique: list[Message], mlt_existant
     """
     lignes = []
     for msg in historique:
-        lignes.append("user :" +msg.msg_user)
-        lignes.append("assistant : "+msg.reponse_assistant)
+        lignes.append("Résumé de la conversation à " + str(msg.date_creation) + " :" + msg.message )
     historique_texte = "\n".join(lignes)
 
     if not historique_texte.strip():
         return mlt_existante
 
     prompt = _charger("resume_mlt.txt").format(
-        mlt_existante=mlt_existante or "Aucune fiche existante.",
-        historique=historique_texte,
+        liste_messages=historique_texte,
     )
     return llm.send_simple(prompt).strip()

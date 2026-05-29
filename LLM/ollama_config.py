@@ -1,4 +1,4 @@
-from .LLMBase import BaseLLMClient, Message, LLMResponse
+from .LLMBase import BaseLLMClient, Message as LLMMessage, LLMResponse
 import ollama  as _ollama
 class OllamaClient(BaseLLMClient):
     """
@@ -13,7 +13,7 @@ class OllamaClient(BaseLLMClient):
         self.base_url = base_url
         self._ollama = _ollama
 
-    def send(self,messages: list[Message],system_prompt: str = None,) -> LLMResponse:
+    def send(self,messages: list[LLMMessage],system_prompt: str = None,) -> LLMResponse:
         api_messages = []
         if system_prompt:
             api_messages.append({"role": "system", "content": system_prompt})

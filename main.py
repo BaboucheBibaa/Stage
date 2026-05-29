@@ -13,12 +13,10 @@ ID_PROFIL = 1
 SEPARATEUR = "-" * 50
 
 def boucle_chat(dm: DialogueModule):
-    print()
     print(SEPARATEUR)
     print(f" Compagnon prêt | modèle : {dm.compagnon.modele}")
     print(f" Bonjour {dm.profil.prenom} ! (tape 'quit' pour quitter)")
     print(SEPARATEUR)
-    print()
 
     while True:
         try:
@@ -30,7 +28,9 @@ def boucle_chat(dm: DialogueModule):
         if not user_input:
             continue
         if user_input.lower() in ("quit", "exit", "q"):
-            print(resumer_session(dm.compagnon, dm.mct_repo.getToday(), dm.mlt_repo.getRecente(1)))
+            #ici, une session = une exécution du programme, dans un autre contexte, le résumé de la session se ferait chaque jour idéalement
+            
+            #print(resumer_session(dm.llm, dm.mct_repo.getToday(dm.profil.id), dm.mlt_repo.getRecente(dm.profil.id)))
             print("Au revoir !")
             break
         reponse = dm.chat(user_input)
@@ -40,14 +40,14 @@ def main():
     with open("config.yaml") as f:
         config = yaml.safe_load(f)
     db = Database()
-    data_profil    = DonneesProfil(db)
-    data_prefs     = DonneesPreferences(db)
-    data_sujets    = DonneesSujetSensible(db)
+    data_profil = DonneesProfil(db)
+    data_prefs = DonneesPreferences(db)
+    data_sujets = DonneesSujetSensible(db)
     data_compagnon = DonneesCompagnon(db)
-    data_conv      = DonneesConversation(db)
-    data_msg       = DonneesMessage(db)
-    data_mlt       = DonneesMLT(db)
-    data_mct       = DonneesMCT(db)
+    data_conv = DonneesConversation(db)
+    data_msg = DonneesMessage(db)
+    data_mlt = DonneesMLT(db)
+    data_mct = DonneesMCT(db)
     llm = OllamaClient(model=config["llm"]["model"])
     try:
         dm = DialogueModule(

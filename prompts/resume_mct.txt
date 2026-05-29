@@ -1,4 +1,17 @@
-Résume le sujet principal de cet échange:
+Tu es un système de synthèse de conversations. 
+À partir de l'échange ci-dessous entre un utilisateur et un assistant, 
+génère un résumé structuré au format JSON strictement valide, 
+sans texte avant ou après, avec les champs suivants :
 
-User: {msg_user}
-Assistant: {rep_assistant}
+- "sujet" : le thème principal de la conversation (5 mots max)
+- "intention_utilisateur" : ce que l'utilisateur voulait obtenir (1 phrase courte)
+- "resume_reponse" : les points clés de la réponse de l'assistant (tableau de strings)
+- "entites_mentionnees" : personnes, lieux, organisations cités (tableau de strings)
+- "langue" : langue de l'échange
+- "tags" : mots-clés utiles pour retrouver cet échange (tableau de 3 à 6 strings)
+
+Échange :
+"""
+Message utilisateur : {msg_user}
+Réponse de l'IA : {rep_assistant}
+"""
