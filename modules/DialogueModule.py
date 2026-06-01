@@ -24,21 +24,26 @@ class DialogueModule:
         
         self.llm = llm
         self.id_profil = id_profil
-        self.detection_event = DetectionEvent(self.llm,self.event_repo, self.id_profil)
+        self.detection_event = DetectionEvent(self.llm, self.event_repo, self.id_profil)
         
         # Charger les données du profil
         self.profil = self.profil_repo.getProfil(id_profil)
+        if not self.profil:
+            raise ValueError(f"Profil avec l'ID {id_profil} introuvable en base de données")
+        
         self.compagnon = self.compagnon_repo.getCompagnon(1)
+        if not self.compagnon:
+            raise ValueError("Aucun compagnon virtuel trouvé en base de données")
+        
         self.prefs = self.prefs_repo.getPreferences(id_profil)
         self.sensibles = self.sujets_repo.getSujets(id_profil)
         self.mlt = self.mlt_repo.getRecente(id_profil)
         
-        #Historique de la conversation
+        # Historique de la conversation
         self._historique: list[LLMMessage] = []
         self._id_conversation = self._nouvelle_conversation()
-
-    def __delete__(self, instance):
-        pass
+        if not self._id_conversation:
+            raise RuntimeError("Impossible de créer une nouvelle conversation")
 
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
@@ -87,37 +92,83 @@ class DialogueModule:
 
     def _sauvegarder_message(self, msg_user: str, rep_assistant: str) -> None:
         """Sauvegarde le message et la réponse en BD"""
-        self.msg_repo.create(Message(
-            msg_user=msg_user,
-            reponse_assistant=rep_assistant,
-            id_conversation=self._id_conversation,
-            date_creation=datetime.now(),
-        ))
-    def sauvegarder_MLT(self, id_profil : int):
-        #récupération de la discussion de la journée
-        historique = self.mct_repo.getToday(id_profil)
-        #création de l'enregistrement de la mémoire long terme avec les données
-        if self.mlt_repo.create(MLT(
-            id_profil=self.id_profil,
-            date_creation=str(datetime.now()),
-            #résumé JSON de toute la discussion
-            text = resumer_session(self.llm,historique,self.mlt_repo.getRecente(id_profil))
-        )):
-            #si ça a bien été créé, alors on vide la MCT.
-            self.mct_repo.nettoyage(id_profil)
+        try:
+            self.msg_repo.create(Message(
+                msg_user=msg_user,
+                reponse_assistant=rep_assistant,
+                id_conversation=self._id_conversation,
+                date_creation=datetime.now(),
+            ))
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde du message: {e}")
+    def sauvegarder_MLT(self, id_profil: int) -> bool:
+        """Sauvegarde la mémoire long terme (MLT) et nettoie la MCT"""
+        try:
+            # Récupération de la discussion de la journée
+            historique = self.mct_repo.getToday(id_profil)
+            if not historique:
+                print("Aucune conversation à sauvegarder dans la MLT")
+                return False
+            
+            # Création de l'enregistrement de la mémoire long terme avec les données
+            mlt_resume = resumer_session(self.llm, historique, self.mlt_repo.getRecente(id_profil))
+            mlt_id = self.mlt_repo.create(MLT(
+                id_profil=self.id_profil,
+                date_creation=datetime.now(),  # Datetime object, pas string
+                text=mlt_resume
+            ))
+            
+            if mlt_id:
+                # Si ça a bien été créé, alors on vide la MCT
+                self.mct_repo.nettoyage(id_profil)
+                # Rafraîchir le cache de MLT
+                self.mlt = self.mlt_repo.getRecente(id_profil)
+                print(f"MLT sauvegardée avec succès (ID: {mlt_id})")
+                return True
+            else:
+                print("Erreur: Impossible de sauvegarder la MLT")
+                return False
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde de la MLT: {e}")
+            return False
 
-    def _add_MCT(self, msg_user: str, rep_assistant: str) -> None:
+    def _add_MCT(self, msg_user: str, rep_assistant: str) -> bool:
         """Ajoute une donnée dans la mémoire court terme (MCT)"""
-        res= self.mct_repo.create(MCT(
-            message=resumer_echange(self.llm, msg_user,rep_assistant),
-            id_profil=self.id_profil,
-            date_creation=datetime.now(),
-        ))
-        print("ID MCT retourné : "+ str(res))
+        try:
+            resume = resumer_echange(self.llm, msg_user, rep_assistant)
+            mct_id = self.mct_repo.create(MCT(
+                message=resume,
+                id_profil=self.id_profil,
+                date_creation=datetime.now(),
+            ))
+            if mct_id:
+                print(f"MCT créée avec succès (ID: {mct_id})")
+                return True
+            else:
+                print("Erreur: Impossible de créer la MCT")
+                return False
+        except Exception as e:
+            print(f"Erreur lors de l'ajout en MCT: {e}")
+            return False
     @staticmethod
     def _calculer_age(date_naissance : datetime) -> int:
-        """Calcule l'âge à partir de la date de naissance"""
-        today = datetime.today()
-        return today.year - date_naissance.year - (
-            (today.month, today.day) < (date_naissance.month, date_naissance.day)
-        )
+        """Calcule l'âge à partir de la date de naissance
+        
+        Args:
+            date_naissance: datetime.date, datetime.datetime, ou string au format 'YYYY-MM-DD'
+            
+        Returns:
+            int: Age en années
+        """
+        try:
+            today = datetime.now()
+            age = today.year - date_naissance.year
+            
+            # Ajuster si l'anniversaire n'a pas eu lieu cette année
+            if (today.month, today.day) < (date_naissance.month, date_naissance.day):
+                age -= 1
+            
+            return age
+        except Exception as e:
+            print(f"Erreur lors du calcul de l'âge: {e}")
+            return 0

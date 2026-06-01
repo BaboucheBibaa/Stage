@@ -58,7 +58,7 @@ class DonneesProfil:
         result = self._db.executeFetch(
             "SELECT ID_Profil FROM Profil WHERE Nom = ? AND Prenom = ? AND Date_Naissance = ?", (profil.nom,profil.prenom,profil.date_naissance)
         )
-        return result
+        return result[0]['ID_Profil'] if result else None
 
     def update(self, profil: Profil) -> None:
         """Met à jour un profil
@@ -116,7 +116,7 @@ class DonneesPreferences:
             "SELECT ID_Pref FROM Preferences WHERE ID_Profil = ? ORDER BY ID_Pref DESC LIMIT 1",
             (pref.id_profil,)
         )
-        return result[0]["ID_Pref"]
+        return result[0]["ID_Pref"] if result else None
 
     def update(self, pref: Preference) -> bool:
         """Met à jour le niveau d'une préférence existante.
@@ -174,7 +174,7 @@ class DonneesSujetSensible:
             "SELECT ID_Sujet FROM sujets_sensibles WHERE ID_Profil = ? ORDER BY ID_Sujet",
             (sujet.id_profil,)
         )
-        return result[0]["ID_Sujet"]
+        return result[0]["ID_Sujet"] if result else None
 
 
     def update(self, sujet: SujetSensible) -> bool:
@@ -206,13 +206,13 @@ class DonneesCompagnon:
         Returns:
             CompagnonVirtuel | None: Données du compagnon ou None si aucun résultat
         """
-        row = self._db.executeFetch(
+        rows = self._db.executeFetch(
             "SELECT * FROM Compagnon_Virtuel WHERE ID_Compagnon = ?",
             (id_compagnon,)
         )
-        row = row[0]
-        if not row:
+        if not rows:
             return None
+        row = rows[0]
         return CompagnonVirtuel(
             id=row["ID_Compagnon"],
             modele=row["Modele"],
@@ -251,7 +251,7 @@ class DonneesConversation:
                 "ORDER BY ID_Conversation DESC LIMIT 1",
                 (conv.id_user, conv.id_companion)
             )
-        return result[0]['ID_Conversation']
+        return result[0]['ID_Conversation'] if result else None
 
     def getConversation(self, id_conversation : int) -> Conversation:
         """Récupère une conversation par son identifiant
@@ -352,7 +352,7 @@ class DonneesMessage:
             """SELECT ID_Message FROM Messages WHERE ID_Conversation = ? ORDER BY Date_Message DESC LIMIT 1""",
             (msg.id_conversation,)
         )
-        return result[0]
+        return result[0]['ID_Message'] if result else None
 
     def getMessages(self, id_conversation: int) -> list[Message]:
         """Récupère tous les messages d'une conversation
@@ -392,15 +392,15 @@ class DonneesEvenement:
             int: Identifiant de l'événement créé
         """
         res = self._db.execute(
-            """INSERT INTO Evenement (Timing, Statut, Description, ID_Profil)
-                VALUES (?, ?, ?, ?)""",
+            """INSERT INTO Evenement (Titre, Timing, Statut, Contexte, ID_Profil)
+                VALUES ("Test", ?, ?, ?, ?)""",
             (evt.timing, evt.statut, evt.description, evt.id_profil),
         )
         result = self._db.executeFetch(
             """SELECT ID_Event FROM Evenement WHERE ID_Profil = ? ORDER BY Timing DESC LIMIT 1""",
             (evt.id_profil,)
         )
-        return result[0][0]
+        return result[0]['ID_Event'] if result else None
 
     def getFuturs(self, id_profil: int) -> list[Evenement]:
         """Récupère les événements futurs ou en cours d'un profil
@@ -469,7 +469,7 @@ class DonneesMLT:
             """SELECT ID_MLT FROM MLT WHERE ID_Profil = ? ORDER BY DATE_CREATION DESC LIMIT 1""",
             (mlt.id_profil,)
         )
-        return result
+        return result[0]['ID_MLT'] if result else None
     
     def getRecente(self, id_profil: int) -> MLT | None:
         """Récupère la MLT la plus récente d'un profil
@@ -514,7 +514,7 @@ class DonneesMCT:
             """SELECT ID_MCT FROM MCT WHERE ID_Profil = ? ORDER BY DATE_CREATION DESC LIMIT 1""",
             (mct.id_profil,)
         )
-        return result
+        return result[0]['ID_MCT'] if result else None
     
     def getToday(self, id_profil: int) -> list[MCT]:
         """Récupère les N échanges les plus récents d'un profil

@@ -28,10 +28,12 @@ class DetectionEvent:
             evenements = json.loads(raw)
         except json.JSONDecodeError:
             return
-        for evt in evenements:
+        for evt in evenements['evenements']:
+            print("evt: ")
+            print(evt)
             self.evt_repo.create(Evenement(
                 id_profil=self.id_profil,
-                description=evt["description"],
-                timing=datetime.strptime(evt["timing"], "%Y-%m-%d %H:%M:%S"),
-                statut=False,
+                description=evt['contexte'],
+                timing=datetime.strptime(evt['timing'], "%Y-%m-%d %H:%M:%S"),
+                statut='Planifié',
             ))

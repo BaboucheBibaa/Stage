@@ -1,9 +1,14 @@
-Tu es un extracteur d'événements. Lis le message suivant et extrais les événements
-mentionnés (rendez-vous, examens, deadlines, etc.).
-À partir du message ci-dessous, extraits les événements mentionnés (rendez-vous, examen, deadlines, etc...).
-Extrais ces événements sous la forme d'un JSON strictement valide, sans aucun texte avant ou après, avec les champs suivants:
+Voici la date du jour {datetime_now}
 
-- contexte : Contexte de l'événement (rendez-vous, examen, deadlines)
-- timing: Heure à laquelle l'événement doit être déclenché.
+Tu es un extracteur d'événements. Lis le message suivant et extrais les événements mentionnés (rendez-vous, examens, deadlines, etc.).
+À partir du message ci-dessous, extraits les événements mentionnés (rendez-vous, examen, deadlines, etc...).
+Extrais ces événements et retourne les sous la forme d'un JSON strictement valide nommé evenements, avec les champs suivants:
+
+- contexte : Contexte de l'événement (rendez-vous, examen, deadlines, etc... c'est un exemple)
+- timing: Heure à laquelle l'événement doit être déclenché au format YYYY-MM-DD HH:mm:ss.
 - statut: 'Planifié', 'En Cours' ou 'Terminé'.
+
+Message:
+{message_user}
+
 
