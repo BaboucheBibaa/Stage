@@ -29,7 +29,7 @@ def boucle_chat(dm: DialogueModule):
         if user_input.lower() in ("quit", "exit", "q"):
             #ici, une session = une exécution du programme, dans un autre contexte, le résumé de la session se ferait chaque jour idéalement
             
-            print(dm.sauvegarder_MLT(dm.id_profil))
+            dm.sauvegarder_MLT(dm.id_profil)
             print("Au revoir !")
             break
         reponse = dm.chat(user_input)

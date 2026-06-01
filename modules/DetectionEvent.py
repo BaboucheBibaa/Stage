@@ -22,15 +22,12 @@ class DetectionEvent:
             datetime_now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
         raw = self.llm.send_simple(prompt).strip()
-        print("Résultat de la détection d'événements: ")
-        print(raw)
         try:
             evenements = json.loads(raw)
         except json.JSONDecodeError:
             return
+        #il peut y avoir plusieurs événements de détectés dans un seul message
         for evt in evenements['evenements']:
-            print("evt: ")
-            print(evt)
             self.evt_repo.create(Evenement(
                 id_profil=self.id_profil,
                 description=evt['contexte'],
