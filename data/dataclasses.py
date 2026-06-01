@@ -99,22 +99,38 @@ class DonneesPreferences:
             for r in rows
         ]
 
-    def upsert(self, pref: Preference) -> int:
-        """Insère ou met à jour une préférence utilisateur
+    def create(self, pref: Preference) -> int:
+        """Insère une nouvelle préférence et retourne son identifiant.
 
         Args:
-            pref (Preference): Données correspondant à une préférence utilisateur
+            pref (Preference): Données de la préférence à ajouter
+
+        Returns:
+            int: Identifiant de la préférence créée
+        """
+        self._db.execute(
+            "INSERT INTO Preferences (Sujet, Niveau, ID_Profil) VALUES (?, ?, ?)",
+            (pref.sujet, pref.niveau, pref.id_profil),
+        )
+        result = self._db.executeFetch(
+            "SELECT ID_Pref FROM Preferences WHERE ID_Profil = ? ORDER BY ID_Pref DESC LIMIT 1",
+            (pref.id_profil,)
+        )
+        return result[0]["ID_Pref"]
+
+    def update(self, pref: Preference) -> bool:
+        """Met à jour le niveau d'une préférence existante.
+
+        Args:
+            pref (Preference): Préférence à mettre à jour (doit avoir un id renseigné)
 
         Returns:
             bool: Requête réussie ou non
         """
-        res =self._db.execute(
-            """INSERT INTO Preferences (Sujet, Niveau, ID_Profil)
-                VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE Niveau = ?""",
-            (pref.sujet, pref.niveau, pref.id_profil, pref.niveau),
+        return self._db.execute(
+            "UPDATE Preferences SET Niveau = ? WHERE ID_Pref = ?",
+            (pref.niveau, pref.id),
         )
-        return res
 
 
 class DonneesSujetSensible:
@@ -141,20 +157,39 @@ class DonneesSujetSensible:
             for r in rows
         ]
 
-    def upsert(self, sujet: SujetSensible) -> int:
-        """Insère ou met à jour un sujet sensible
+    def create(self, sujet: SujetSensible) -> int:
+        """Insère un nouveau sujet sensible et retourne son identifiant.
 
         Args:
-            sujet (SujetSensible): Données correspondant à un sujet sensible
+            sujet (SujetSensible): Données du sujet sensible à ajouter
+
+        Returns:
+            int: Identifiant du sujet sensible créé
+        """
+        self._db.execute(
+            "INSERT INTO Sujets_Sensibles (Sujet, Niveau, ID_Profil) VALUES (?, ?, ?)",
+            (sujet.sujet, sujet.niveau, sujet.id_profil),
+        )
+        result = self._db.executeFetch(
+            "SELECT ID_Sujet FROM sujets_sensibles WHERE ID_Profil = ? ORDER BY ID_Sujet",
+            (sujet.id_profil,)
+        )
+        return result[0]["ID_Sujet"]
+
+
+    def update(self, sujet: SujetSensible) -> bool:
+        """Met à jour le niveau d'un sujet sensible existant.
+
+        Args:
+            sujet (SujetSensible): Sujet sensible à mettre à jour (doit avoir un id renseigné)
 
         Returns:
             bool: Requête réussie ou non
         """
-        res = self._db.execute(
-            "INSERT INTO Sujets_Sensibles (Sujet, Niveau, ID_Profil) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE Niveau = ?",
-            (sujet.sujet, sujet.niveau, sujet.id_profil, sujet.niveau),
+        return self._db.execute(
+            "UPDATE Sujets_Sensibles SET Niveau = ? WHERE ID_Sujet = ?",
+            (sujet.niveau, sujet.id),
         )
-        return res
 
 class DonneesCompagnon:
     """Classe permettant de gérer les données des compagnons virtuels au sein d'une BD.
@@ -361,8 +396,8 @@ class DonneesEvenement:
                 VALUES (?, ?, ?, ?)""",
             (evt.timing, evt.statut, evt.description, evt.id_profil),
         )
-        result = self._db.execute(
-            """SELECT ID_Event FROM Evenement WHERE ID_Profil = ? ORDER BY Date_Message DESC LIMIT 1""",
+        result = self._db.executeFetch(
+            """SELECT ID_Event FROM Evenement WHERE ID_Profil = ? ORDER BY Timing DESC LIMIT 1""",
             (evt.id_profil,)
         )
         return result[0][0]
@@ -427,7 +462,7 @@ class DonneesMLT:
             int: Identifiant de l'entrée MLT créée
         """
         self._db.execute(
-            "INSERT INTO MLT (Message, Date_Creation, ID_Profil) VALUES (?, ?, ?)",
+            "INSERT INTO MLT (Donnees, Date_Creation, ID_Profil) VALUES (?, ?, ?)",
             (mlt.text, mlt.date_creation, mlt.id_profil),
         )
         result = self._db.executeFetch(
@@ -451,7 +486,7 @@ class DonneesMLT:
         )
         if result:
             r = result[0]
-            return MLT(id=r["ID_MLT"], text=r["Message"], id_profil=r["ID_Profil"], date_creation=r["Date_Creation"])
+            return MLT(id=r["ID_MLT"], text=r["Donnees"], id_profil=r["ID_Profil"], date_creation=r["Date_Creation"])
         return None
     
 class DonneesMCT:
@@ -494,7 +529,7 @@ class DonneesMCT:
         rows = self._db.executeFetch(
             """SELECT * FROM MCT WHERE ID_Profil = ? AND DATE(Date_Creation) = ? 
                 ORDER BY Date_Creation DESC""",
-            (id_profil, str(datetime.date(datetime.now()))),
+            (id_profil, str(datetime.now().date())),
         )
         return [
             MCT(id=r["ID_MCT"], message=r["Message"],

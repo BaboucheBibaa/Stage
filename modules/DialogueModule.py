@@ -4,6 +4,7 @@ from LLM.LLMBase import Message as LLMMessage, BaseLLMClient
 from prompts.prompt_loader import build_system_prompt
 import data.dataclasses as dt
 from .resume import resumer_echange, resumer_session
+from .DetectionEvent import DetectionEvent
 MCT_WINDOW = 10  # Garder les 10 derniers messages en mémoire court terme
 
 class DialogueModule:
@@ -19,9 +20,11 @@ class DialogueModule:
         self.msg_repo : dt.DonneesMessage = data_repos['message']
         self.mlt_repo : dt.DonneesMLT = data_repos['mlt']
         self.mct_repo : dt.DonneesMCT = data_repos['mct']
+        self.event_repo : dt.DonneesEvenement = data_repos['event']
         
         self.llm = llm
         self.id_profil = id_profil
+        self.detection_event = DetectionEvent(self.llm,self.event_repo, self.id_profil)
         
         # Charger les données du profil
         self.profil = self.profil_repo.getProfil(id_profil)
@@ -33,6 +36,9 @@ class DialogueModule:
         #Historique de la conversation
         self._historique: list[LLMMessage] = []
         self._id_conversation = self._nouvelle_conversation()
+
+    def __delete__(self, instance):
+        pass
 
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
@@ -49,7 +55,7 @@ class DialogueModule:
         
         # Ajouter la réponse à l'historique
         self._historique.append(LLMMessage(role="assistant", content=reponse_texte))
-        
+        self.detection_event.detecter(message_user)
         self._sauvegarder_message(message_user, reponse_texte)
         self._add_MCT(message_user, reponse_texte)
         
@@ -93,9 +99,9 @@ class DialogueModule:
         #création de l'enregistrement de la mémoire long terme avec les données
         if self.mlt_repo.create(MLT(
             id_profil=self.id_profil,
-            date_creation=str(datetime.date(datetime.now())),
+            date_creation=str(datetime.now()),
             #résumé JSON de toute la discussion
-            text = resumer_session(self.llm,historique)
+            text = resumer_session(self.llm,historique,self.mlt_repo.getRecente(id_profil))
         )):
             #si ça a bien été créé, alors on vide la MCT.
             self.mct_repo.nettoyage(id_profil)

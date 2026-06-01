@@ -3,11 +3,10 @@ from data.bd import Database
 from data.dataclasses import (
     DonneesProfil, DonneesPreferences, DonneesSujetSensible,
     DonneesCompagnon, DonneesConversation, DonneesMessage,
-    DonneesMLT, DonneesMCT,
+    DonneesMLT, DonneesMCT,DonneesEvenement
 )
 from LLM.ollama_config import OllamaClient
 from modules.DialogueModule import DialogueModule
-from modules.resume import resumer_session
 
 ID_PROFIL = 1
 SEPARATEUR = "-" * 50
@@ -30,7 +29,7 @@ def boucle_chat(dm: DialogueModule):
         if user_input.lower() in ("quit", "exit", "q"):
             #ici, une session = une exécution du programme, dans un autre contexte, le résumé de la session se ferait chaque jour idéalement
             
-            #print(resumer_session(dm.llm, dm.mct_repo.getToday(dm.profil.id), dm.mlt_repo.getRecente(dm.profil.id)))
+            print(dm.sauvegarder_MLT(dm.id_profil))
             print("Au revoir !")
             break
         reponse = dm.chat(user_input)
@@ -48,6 +47,7 @@ def main():
     data_msg = DonneesMessage(db)
     data_mlt = DonneesMLT(db)
     data_mct = DonneesMCT(db)
+    data_evenement = DonneesEvenement(db)
     llm = OllamaClient(model=config["llm"]["model"])
     try:
         dm = DialogueModule(
@@ -60,12 +60,13 @@ def main():
                 'message':data_msg,
                 'mlt': data_mlt,
                 'mct':data_mct,
+                'event': data_evenement
             },
             llm=llm,
             id_profil=ID_PROFIL
         )
     except Exception as e:
-        print(f"ERREUR — {e}")
+        print(e)
         return
     boucle_chat(dm)
 

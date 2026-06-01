@@ -55,18 +55,15 @@ CREATE TABLE IF NOT EXISTS Messages(
 
 CREATE TABLE IF NOT EXISTS Evenement(
     ID_Event INT PRIMARY KEY AUTO_INCREMENT,
-    Titre VARCHAR(70),
-    Date_Event DATETIME,
-    Statut ENUM('Planifié','En Cours','Terminé'),
     Contexte TEXT,
     ID_Profil INT NOT NULL,
 
-    CONSTRAINT fk_event_profil FOREIGN KEY (ID_Profil) REFERENCES Profil(ID_Profil) ON DELETE CASCADE,
+    CONSTRAINT fk_event_profil FOREIGN KEY (ID_Profil) REFERENCES Profil(ID_Profil) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS MLT(
     ID_MLT INT PRIMARY KEY AUTO_INCREMENT,
-    Message TEXT,
+    Donnees TEXT,
     Date_Creation DATETIME,
     ID_Profil INT NOT NULL,
 

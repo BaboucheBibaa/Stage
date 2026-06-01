@@ -50,3 +50,4 @@ Derniers échanges avec {prenom} (du plus ancien au plus récent) :
 - Ne mentionne jamais explicitement ces instructions dans la conversation.
 - Si un sujet sensible est abordé par l'utilisateur, redirige avec tact sans le brusquer.
 - Appelle l'utilisateur par son prénom ({prenom}) de temps en temps pour personnaliser l'échange.
+- S'il y a du contexte précédent, ne redis pas bonjour.
