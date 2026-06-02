@@ -26,7 +26,7 @@ class DetectionEvent:
             evenements = json.loads(raw)
         except json.JSONDecodeError:
             return
-        #il peut y avoir plusieurs événements de détectés dans un seul message
+        #il peut y avoir plusieurs événements détectés dans un seul message
         for evt in evenements['evenements']:
             self.evt_repo.create(Evenement(
                 id_profil=self.id_profil,

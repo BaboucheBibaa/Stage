@@ -16,8 +16,8 @@ from datetime import datetime
 class DonneesProfil:
     """Classe permettant de gérer les données du profil au sein d'une BD.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def getProfil(self, id_profil: int) -> Profil | None:
         """Retourne le profil de l'utilisateur id_profil
@@ -78,8 +78,8 @@ class DonneesProfil:
 class DonneesPreferences:
     """Classe permettant de gérer les préférences d'un profil au sein d'une BD.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def getPreferences(self, id_profil: int) -> list[Preference]:
         """Récupère les préférences d'un profil avec pour identifiant id_profil
@@ -132,12 +132,11 @@ class DonneesPreferences:
             (pref.niveau, pref.id),
         )
 
-
 class DonneesSujetSensible:
     """Classe permettant de gérer les sujets sensibles d'un profil au sein d'une BD.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def getSujets(self, id_profil: int) -> list[SujetSensible]:
         """Récupère les sujets sensibles d'un profil avec pour identifiant id_profil
@@ -194,8 +193,8 @@ class DonneesSujetSensible:
 class DonneesCompagnon:
     """Classe permettant de gérer les données des compagnons virtuels au sein d'une BD.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def getCompagnon(self, id_compagnon: int) -> CompagnonVirtuel:
         """Récupère un compagnon virtuel par son identifiant
@@ -227,8 +226,8 @@ class DonneesCompagnon:
 class DonneesConversation:
     """Classe permettant de gérer les conversations entre un profil et un compagnon au sein d'une BD.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def create(self, conv: Conversation) -> int:
         """Crée une nouvelle conversation et retourne son identifiant
@@ -331,8 +330,8 @@ class DonneesConversation:
 class DonneesMessage:
     """Classe permettant de gérer les messages d'une conversation au sein d'une BD.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def create(self, msg: Message) -> int:
         """Crée un message dans une conversation et retourne son identifiant
@@ -379,8 +378,8 @@ class DonneesMessage:
 class DonneesEvenement:
     """Classe permettant de gérer les événements détectés au sein d'une BD.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def create(self, evt: Evenement) -> int:
         """Crée un événement et retourne son identifiant
@@ -391,7 +390,7 @@ class DonneesEvenement:
         Returns:
             int: Identifiant de l'événement créé
         """
-        res = self._db.execute(
+        self._db.execute(
             """INSERT INTO Evenement (Titre, Timing, Statut, Contexte, ID_Profil)
                 VALUES ("Test", ?, ?, ?, ?)""",
             (evt.timing, evt.statut, evt.description, evt.id_profil),
@@ -449,8 +448,8 @@ class DonneesMLT:
     
     La MLT conserve les résumés et informations durables sur le profil, basés sur les conversations passées.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def create(self, mlt: MLT) -> int:
         """Crée une entrée MLT et retourne son identifiant
@@ -494,8 +493,8 @@ class DonneesMCT:
     
     La MCT conserve les N derniers échanges avec le compagnon pour maintenir le contexte de conversation.
     """
-    def __init__(self, db: Database):
-        self._db = db
+    def __init__(self):
+        self._db = Database()
 
     def create(self, mct: MCT) -> int:
         """Crée une entrée MCT et retourne son identifiant

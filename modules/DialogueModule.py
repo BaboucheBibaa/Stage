@@ -2,42 +2,47 @@ from datetime import datetime
 from data.modeles import Conversation, Message, MCT, MLT
 from LLM.LLMBase import Message as LLMMessage, BaseLLMClient
 from prompts.prompt_loader import build_system_prompt
-import data.dataclasses as dt
+from data.dataclasses import (
+    DonneesProfil, DonneesPreferences, DonneesSujetSensible,
+    DonneesCompagnon, DonneesConversation, DonneesMessage,
+    DonneesMLT, DonneesMCT,DonneesEvenement
+)
 from .resume import resumer_echange, resumer_session
 from .DetectionEvent import DetectionEvent
+from data.bd import Database
 MCT_WINDOW = 10  # Garder les 10 derniers messages en mémoire court terme
 
 class DialogueModule:
     """Gère les dialogues entre l'utilisateur et le compagnon virtuel"""
     
-    def __init__(self, data_repos: dict, llm: BaseLLMClient, id_profil: int):
+    def __init__(self, llm: BaseLLMClient, id_profil: int):
         #dataclasses
-        self.profil_repo : dt.DonneesProfil = data_repos['profil']
-        self.prefs_repo : dt.DonneesPreferences = data_repos['preferences']
-        self.sujets_repo : dt.DonneesSujetSensible = data_repos['sujets_sensibles']
-        self.compagnon_repo : dt.DonneesCompagnon = data_repos['compagnon']
-        self.conv_repo : dt.DonneesConversation = data_repos['conversation']
-        self.msg_repo : dt.DonneesMessage = data_repos['message']
-        self.mlt_repo : dt.DonneesMLT = data_repos['mlt']
-        self.mct_repo : dt.DonneesMCT = data_repos['mct']
-        self.event_repo : dt.DonneesEvenement = data_repos['event']
+        self.data_profil = DonneesProfil()
+        self.data_prefs = DonneesPreferences()
+        self.data_sujets = DonneesSujetSensible()
+        self.data_compagnon = DonneesCompagnon()
+        self.data_conv = DonneesConversation()
+        self.data_msg = DonneesMessage()
+        self.data_mlt = DonneesMLT()
+        self.data_mct = DonneesMCT()
+        self.data_evenement = DonneesEvenement()
         
         self.llm = llm
         self.id_profil = id_profil
-        self.detection_event = DetectionEvent(self.llm, self.event_repo, self.id_profil)
+        self.detection_event = DetectionEvent(self.llm, self.data_evenement, self.id_profil)
         
         # Charger les données du profil
-        self.profil = self.profil_repo.getProfil(id_profil)
+        self.profil = self.data_profil.getProfil(id_profil)
         if not self.profil:
             raise ValueError(f"Profil avec l'ID {id_profil} introuvable en base de données")
         
-        self.compagnon = self.compagnon_repo.getCompagnon(1)
+        self.compagnon = self.data_compagnon.getCompagnon(1)
         if not self.compagnon:
             raise ValueError("Aucun compagnon virtuel trouvé en base de données")
         
-        self.prefs = self.prefs_repo.getPreferences(id_profil)
-        self.sensibles = self.sujets_repo.getSujets(id_profil)
-        self.mlt = self.mlt_repo.getRecente(id_profil)
+        self.prefs = self.data_prefs.getPreferences(id_profil)
+        self.sensibles = self.data_sujets.getSujets(id_profil)
+        self.mlt = self.data_mlt.getRecente(id_profil)
         
         # Historique de la conversation
         self._historique: list[LLMMessage] = []
@@ -77,7 +82,7 @@ class DialogueModule:
             preferences=self.prefs,
             sujets_sensibles=self.sensibles,
             mlt_text=self.mlt.text if self.mlt else "",
-            mct_list=self.mct_repo.getToday(self.id_profil),
+            mct_list=self.data_mct.getToday(self.id_profil),
         )
 
     def _nouvelle_conversation(self) -> int:
@@ -88,12 +93,12 @@ class DialogueModule:
             id_companion=self.compagnon.id,
             date_creation=datetime.now(),
         )
-        return self.conv_repo.create(conv)
+        return self.data_conv.create(conv)
 
     def _sauvegarder_message(self, msg_user: str, rep_assistant: str) -> None:
         """Sauvegarde le message et la réponse en BD"""
         try:
-            self.msg_repo.create(Message(
+            self.data_msg.create(Message(
                 msg_user=msg_user,
                 reponse_assistant=rep_assistant,
                 id_conversation=self._id_conversation,
@@ -105,14 +110,14 @@ class DialogueModule:
         """Sauvegarde la mémoire long terme (MLT) et nettoie la MCT"""
         try:
             # Récupération de la discussion de la journée
-            historique = self.mct_repo.getToday(id_profil)
+            historique = self.data_mct.getToday(id_profil)
             if not historique:
                 print("Aucune conversation à sauvegarder dans la MLT")
                 return False
             
             # Création de l'enregistrement de la mémoire long terme avec les données
-            mlt_resume = resumer_session(self.llm, historique, self.mlt_repo.getRecente(id_profil))
-            mlt_id = self.mlt_repo.create(MLT(
+            mlt_resume = resumer_session(self.llm, historique, self.data_mlt.getRecente(id_profil))
+            mlt_id = self.data_mlt.create(MLT(
                 id_profil=self.id_profil,
                 date_creation=datetime.now(),  # Datetime object, pas string
                 text=mlt_resume
@@ -120,9 +125,9 @@ class DialogueModule:
             
             if mlt_id:
                 # Si ça a bien été créé, alors on vide la MCT
-                self.mct_repo.nettoyage(id_profil)
+                self.data_mct.nettoyage(id_profil)
                 # Rafraîchir le cache de MLT
-                self.mlt = self.mlt_repo.getRecente(id_profil)
+                self.mlt = self.data_mlt.getRecente(id_profil)
                 print(f"MLT sauvegardée avec succès (ID: {mlt_id})")
                 return True
             else:
@@ -136,7 +141,7 @@ class DialogueModule:
         """Ajoute une donnée dans la mémoire court terme (MCT)"""
         try:
             resume = resumer_echange(self.llm, msg_user, rep_assistant)
-            mct_id = self.mct_repo.create(MCT(
+            mct_id = self.data_mct.create(MCT(
                 message=resume,
                 id_profil=self.id_profil,
                 date_creation=datetime.now(),
