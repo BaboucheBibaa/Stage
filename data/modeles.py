@@ -1,20 +1,15 @@
 """
 Modèles de données — Définition des structures de données normalisées.
 
-=== IMPORTANCE DES MODÈLES DE DONNÉES NORMALISÉS ===
-
 Ce module définit les modèles de données (dataclasses) qui représentent les entités
 du système. L'utilisation de modèles normalisés est crucial pour plusieurs raisons :
 
-1. **Cohérence** : Assure que toutes les parties du code utilisent la même structure
+**Cohérence** : Assure que toutes les parties du code utilisent la même structure
    de données pour une entité (ex: un Profil a toujours les mêmes champs).
 
-2. **Typage fort** : Certes, Python n'est pas par défaut un langage typé, mais ici, on garde les bonnes pratiques et on essaye de typer un maximum les données que l'on utilise au sein du projet.
+**Typage fort** : Certes, Python n'est pas par défaut un langage typé, mais ici, on garde les bonnes pratiques et on essaye de typer un maximum les données que l'on utilise au sein du projet.
 
-3. **Sérialisation/Désérialisation** : Convertir entre JSON, BD et objets Python est simplifié quand les structures sont bien définies.
-
-4. **Documentation** : Les modèles permettent de documenter à eux-mêmes le schéma de base de la BD. 
-
+**Sérialisation/Désérialisation** : Convertir entre JSON, BD et objets Python est simplifié quand les structures sont bien définies.
 """
 
 from dataclasses import dataclass

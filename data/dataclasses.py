@@ -1,14 +1,3 @@
-"""
-DataClasses — Couche d'abstraction pour accéder aux données en BD.
-
-Ce module fournit des classes de gestion de données (repositories) pour persister
-et récupérer les informations relatives aux profils, préférences, conversations,
-mémoires, et autres entités du système.
-
-Chaque classe correspond à une entité du modèle de données et expose des méthodes
-de CRUD (Create, Read, Update, Delete) ou de requêtes spécifiques.
-"""
-
 from .bd import Database
 from .modeles import Conversation, Profil, Preference, Message, MLT, MCT, SujetSensible, CompagnonVirtuel, Evenement
 from datetime import datetime
@@ -391,8 +380,8 @@ class DonneesEvenement:
             int: Identifiant de l'événement créé
         """
         self._db.execute(
-            """INSERT INTO Evenement (Titre, Timing, Statut, Contexte, ID_Profil)
-                VALUES ("Test", ?, ?, ?, ?)""",
+            """INSERT INTO Evenement (Timing, Statut, Contexte, ID_Profil)
+                VALUES (?, ?, ?, ?)""",
             (evt.timing, evt.statut, evt.description, evt.id_profil),
         )
         result = self._db.executeFetch(
@@ -415,13 +404,13 @@ class DonneesEvenement:
         """
         rows = self._db.executeFetch(
             """SELECT * FROM Evenement
-                WHERE ID_Profil = ? AND Statut != 'Terminé' AND Date_Event >= NOW()
-                ORDER BY Date_Event""",
+                WHERE ID_Profil = ? AND Statut != 'Terminé' AND Timing >= NOW()
+                ORDER BY Timing""",
             (id_profil,)
         )
         return [
             Evenement(
-                id=r["ID_Event"], titre=r["Titre"], date_event=r["Date_Event"],
+                id=r["ID_Event"], date_event=r["Date_Event"],
                 statut=r["Statut"], contexte=r["Contexte"], id_profil=r["ID_Profil"],
             )
             for r in rows

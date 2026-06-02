@@ -9,8 +9,6 @@ from data.dataclasses import (
 )
 from .resume import resumer_echange, resumer_session
 from .DetectionEvent import DetectionEvent
-from data.bd import Database
-MCT_WINDOW = 10  # Garder les 10 derniers messages en mémoire court terme
 
 class DialogueModule:
     """Gère les dialogues entre l'utilisateur et le compagnon virtuel"""
@@ -49,7 +47,6 @@ class DialogueModule:
         self._id_conversation = self._nouvelle_conversation()
         if not self._id_conversation:
             raise RuntimeError("Impossible de créer une nouvelle conversation")
-
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
         system_prompt = self._build_system_prompt()
@@ -70,7 +67,6 @@ class DialogueModule:
         self._add_MCT(message_user, reponse_texte)
         
         return reponse_texte
-
     def _build_system_prompt(self) -> str:
         """Construit le prompt système personnalisé"""
         return build_system_prompt(
@@ -84,7 +80,6 @@ class DialogueModule:
             mlt_text=self.mlt.text if self.mlt else "",
             mct_list=self.data_mct.getToday(self.id_profil),
         )
-
     def _nouvelle_conversation(self) -> int:
         """Crée une nouvelle conversation"""
         conv = Conversation(
@@ -94,7 +89,6 @@ class DialogueModule:
             date_creation=datetime.now(),
         )
         return self.data_conv.create(conv)
-
     def _sauvegarder_message(self, msg_user: str, rep_assistant: str) -> None:
         """Sauvegarde le message et la réponse en BD"""
         try:
@@ -136,7 +130,6 @@ class DialogueModule:
         except Exception as e:
             print(f"Erreur lors de la sauvegarde de la MLT: {e}")
             return False
-
     def _add_MCT(self, msg_user: str, rep_assistant: str) -> bool:
         """Ajoute une donnée dans la mémoire court terme (MCT)"""
         try:

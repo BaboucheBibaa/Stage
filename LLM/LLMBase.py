@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -8,14 +8,13 @@ class Message:
     role: str   # "user", "assistant", ou "system"
     content: str
 
-
 @dataclass
 class LLMResponse:
     content: str
     model: str
     input_tokens: int = 0
     output_tokens: int = 0
-    raw: dict = field(default=None, repr=False)
+    raw: dict = {}
 
 class BaseLLMClient(ABC):
     """
@@ -38,7 +37,7 @@ class BaseLLMClient(ABC):
 
     def send_simple(self, user_text: str, system_prompt: str = None) -> str:
         """
-        Raccourci pour un échange simple : texte → texte.
+        Raccourci pour un échange simple : texte vers texte.
         Utile pour les tests rapides ou les appels internes (extraction de profil, etc.).
         """
         response = self.send(
