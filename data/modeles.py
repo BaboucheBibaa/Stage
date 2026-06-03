@@ -26,13 +26,13 @@ class Profil:
         id (int): Identifiant unique du profil en BD
         nom (str): Nom de famille de l'utilisateur
         prenom (str): Prénom de l'utilisateur
-        date_naissance (str): Date de naissance (format: YYYY-MM-DD)
+        date_naissance (datetime): Date de naissance (format: YYYY-MM-DD)
         date_creation (datetime): Timestamp de création du profil
     """
     id: int = None
     nom: str = None
     prenom: str = None
-    date_naissance: str = None
+    date_naissance: datetime = None
     date_creation: datetime = None
 
 @dataclass

@@ -42,7 +42,7 @@ class DonneesProfil:
         """
         self._db.execute(
             "INSERT INTO Profil (Nom, Prenom, Date_Naissance) VALUES (?, ?, ?)",
-            (profil.nom, profil.prenom, profil.date_naissance),
+            (profil.nom, profil.prenom, datetime.strptime(profil.date_naissance, "%Y-%m-%d %H:%M:%S")),
         )
         result = self._db.executeFetch(
             "SELECT ID_Profil FROM Profil WHERE Nom = ? AND Prenom = ? AND Date_Naissance = ?", (profil.nom,profil.prenom,profil.date_naissance)

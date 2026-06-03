@@ -4,9 +4,10 @@ Tu es un extracteur d'événements. Lis le message suivant et extrais les évén
 À partir du message ci-dessous, extraits les événements mentionnés (rendez-vous, examen, deadlines, etc...).
 Extrais ces événements et retourne les sous la forme d'un JSON strictement valide nommé evenements, avec les champs suivants:
 
+- type : 'rendez-vous', 'examen', 'deadline', 'maladie', 'bien-etre'
 - contexte : Contexte de l'événement (rendez-vous au médecin, examen de mathématiques, deadlines pour un projet, etc... c'est un exemple)
 - timing: Heure à laquelle l'événement doit être déclenché au format YYYY-MM-DD HH:mm:ss.
-- statut: 'Planifié', 'En Cours' ou 'Terminé'.
+- statut: 'Planifié' ou 'Terminé'.
 
 Message:
 {message_user}

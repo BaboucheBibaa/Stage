@@ -2,6 +2,7 @@ import yaml
 from data.bd import Database
 from LLM.ollama_config import OllamaClient
 from modules.DialogueModule import DialogueModule
+from modules.Proactive import ProactiveScheduler
 
 ID_PROFIL = 1
 SEPARATEUR = "-" * 50
@@ -33,6 +34,8 @@ def main():
     with open("config.yaml") as f:
         config = yaml.safe_load(f)
     llm = OllamaClient(model=config["llm"]["model"])
+    schedule = ProactiveScheduler(llm, ID_PROFIL)
+    schedule.start()
     try:
         dm = DialogueModule(
             llm=llm,
@@ -42,6 +45,7 @@ def main():
         print(e)
         return
     boucle_chat(dm)
+    schedule.stop()
 
 if __name__ == "__main__":
     main()
