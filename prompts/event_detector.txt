@@ -1,15 +1,17 @@
 Voici la date du jour {datetime_now}
 
-Tu es un extracteur d'événements. Lis le message suivant et extrais les événements mentionnés (rendez-vous, examens, deadlines, etc.).
-À partir du message ci-dessous, extraits les événements mentionnés (rendez-vous, examen, deadlines, etc...).
-Extrais ces événements et retourne les sous la forme d'un JSON strictement valide nommé evenements, avec les champs suivants:
+Tu es un extracteur d'événements. Lis le message suivant et extrais les événements mentionnés.
+Retourne un JSON strictement valide avec un tableau "evenements". Chaque événement a les champs :
 
-- type : 'rendez-vous', 'examen', 'deadline', 'maladie', 'bien-etre'
-- contexte : Contexte de l'événement (rendez-vous au médecin, examen de mathématiques, deadlines pour un projet, etc... c'est un exemple)
-- timing: Heure à laquelle l'événement doit être déclenché au format YYYY-MM-DD HH:mm:ss.
-- statut: 'Planifié' ou 'Terminé'.
+- type    : une valeur parmi 'rendez-vous', 'examen', 'deadline', 'maladie', 'bien-etre'
+- contexte: description courte de l'événement (ex: "rendez-vous chez le médecin")
+- timing  : heure RÉELLE de l'événement au format YYYY-MM-DD HH:mm:ss
+             Si l'heure exacte n'est pas précisée, utilise une heure raisonnable pour ce type
+             (ex: examen le matin sans heure → 09:00:00, deadline → 23:59:00)
+- statut  : 'Planifié' si l'événement est à venir, 'Terminé' s'il est déjà passé
+
+Si le message ne contient aucun événement, retourne {"evenements": []}.
+Ne retourne rien d'autre que le JSON.
 
 Message:
 {message_user}
-
-

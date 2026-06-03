@@ -12,7 +12,6 @@ from .DetectionEvent import DetectionEvent
 
 class DialogueModule:
     """Gère les dialogues entre l'utilisateur et le compagnon virtuel"""
-    
     def __init__(self, llm: BaseLLMClient, id_profil: int):
         #dataclasses
         self.data_profil = DonneesProfil()

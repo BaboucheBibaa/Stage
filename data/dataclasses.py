@@ -391,17 +391,6 @@ class DonneesEvenement:
         return result[0]['ID_Event'] if result else None
 
     def getFuturs(self, id_profil: int) -> list[Evenement]:
-        """Récupère les événements futurs ou en cours d'un profil
-        
-        Retourne uniquement les événements dont le statut n'est pas 'Terminé' et 
-        dont la date est supérieure ou égale à maintenant.
-
-        Args:
-            id_profil (int): Identifiant du profil
-
-        Returns:
-            list[Evenement]: Liste des événements futurs, triés par date croissante
-        """
         rows = self._db.executeFetch(
             """SELECT * FROM Evenement
                 WHERE ID_Profil = ? AND Statut != 'Terminé' AND Timing >= NOW()
@@ -410,11 +399,15 @@ class DonneesEvenement:
         )
         return [
             Evenement(
-                id=r["ID_Event"], date_event=r["Date_Event"],
-                statut=r["Statut"], contexte=r["Contexte"], id_profil=r["ID_Profil"],
+                id=r["ID_Event"],
+                timing=r["Timing"],
+                statut=r["Statut"],
+                description=r["Contexte"],
+                id_profil=r["ID_Profil"],
             )
             for r in rows
         ]
+
 
     def updateEvent(self, id_event: int, statut: str) -> None:
         """Met à jour le statut d'un événement
