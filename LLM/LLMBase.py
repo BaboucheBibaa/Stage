@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -14,7 +14,7 @@ class LLMResponse:
     model: str
     input_tokens: int = 0
     output_tokens: int = 0
-    raw: dict = {}
+    raw: dict = field(default=False,repr=False)
 
 class BaseLLMClient(ABC):
     """

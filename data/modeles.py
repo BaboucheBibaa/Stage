@@ -1,17 +1,3 @@
-"""
-Modèles de données — Définition des structures de données normalisées.
-
-Ce module définit les modèles de données (dataclasses) qui représentent les entités
-du système. L'utilisation de modèles normalisés est crucial pour plusieurs raisons :
-
-**Cohérence** : Assure que toutes les parties du code utilisent la même structure
-   de données pour une entité (ex: un Profil a toujours les mêmes champs).
-
-**Typage fort** : Certes, Python n'est pas par défaut un langage typé, mais ici, on garde les bonnes pratiques et on essaye de typer un maximum les données que l'on utilise au sein du projet.
-
-**Sérialisation/Désérialisation** : Convertir entre JSON, BD et objets Python est simplifié quand les structures sont bien définies.
-"""
-
 from dataclasses import dataclass
 from datetime import datetime
 @dataclass

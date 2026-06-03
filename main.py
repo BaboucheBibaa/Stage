@@ -1,5 +1,4 @@
 import yaml
-from data.bd import Database
 from LLM.ollama_config import OllamaClient
 from modules.DialogueModule import DialogueModule
 from modules.Proactive import ProactiveScheduler
