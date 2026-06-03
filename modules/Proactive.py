@@ -1,23 +1,5 @@
-"""
-ProactiveScheduler — Déclencheur proactif du compagnon virtuel.
+"""Déclenche une action proactive du compagnon virtuel"""
 
-Ce module tourne en thread de fond en parallèle de la boucle de chat.
-Toutes les N minutes (configuré dans config.yaml), il :
-  1. Interroge la BD pour les événements à venir (DonneesEvenement.getFuturs)
-  2. Vérifie si un événement entre dans la fenêtre de déclenchement
-  3. Génère un message proactif via le LLM (prompts/proactive.txt)
-  4. Affiche le message dans la console (interruption du prompt utilisateur)
-  5. Logue la raison du déclenchement dans logs/proactive.log (explicabilité)
-  6. Met à jour le statut de l'événement en BD → 'Déclenché'
-
-Intégration dans main.py :
-    scheduler = ProactiveScheduler(llm, id_profil, intervalle_minutes=5)
-    scheduler.start()          # lance le thread de fond
-    ...boucle_chat(dm)...
-    scheduler.stop()           # arrêt propre à la sortie
-"""
-
-import logging
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -34,21 +16,7 @@ from data.dataclasses import (
 )
 from data.modeles import Evenement
 
-# ── Chemins ──────────────────────────────────────────────────────────────────
-
 _PROMPTS = Path(__file__).parent / "../" "prompts"
-_LOGS_DIR = Path(__file__).parent / "../" "logs"
-_LOGS_DIR.mkdir(exist_ok=True)  # crée logs/ s'il n'existe pas
-
-# ── Logger d'explicabilité ───────────────────────────────────────────────────
-
-_logger = logging.getLogger("proactive")
-_logger.setLevel(logging.INFO)
-if not _logger.handlers:
-    _handler = logging.FileHandler(_LOGS_DIR / "proactive.log", encoding="utf-8")
-    _handler.setFormatter(logging.Formatter("%(asctime)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
-    _logger.addHandler(_handler)
-
 
 def _charger_prompt(nom: str) -> str:
     """Charge un fichier texte depuis le dossier prompts/."""
@@ -78,7 +46,6 @@ class ProactiveScheduler:
         self.intervalle_minutes = intervalle_minutes
         self.fenetre_minutes = fenetre_minutes
 
-        # Repositories BD (chaque instance ouvre sa propre connexion)
         self._data_evt = DonneesEvenement()
         self._data_profil = DonneesProfil()
         self._data_prefs = DonneesPreferences()
@@ -87,57 +54,49 @@ class ProactiveScheduler:
         self._data_mct = DonneesMCT()
         self._data_mlt = DonneesMLT()
 
-        # Contrôle du thread
+        # contrôle du signal d'arrêt du thread
         self._stop_event = threading.Event()
         self._thread = threading.Thread(
+            #ce thread exécute la fonction boucle en parallèle de l'exécution du main.
             target=self._boucle,
             name="ProactiveScheduler",
             daemon=True,
         )
 
     def start(self) -> None:
-        """Démarre le thread de fond."""
+        """Démarre le thread."""
         self._thread.start()
 
     def stop(self) -> None:
-        """Arrête proprement le thread (attend qu'il finisse le cycle en cours)."""
+        """Arrête le thread (attend qu'il finisse le cycle en cours)."""
         self._stop_event.set()
         self._thread.join(timeout=5)
-
-    # ── Boucle principale ────────────────────────────────────────────────────
 
     def _boucle(self) -> None:
         """
         Boucle infinie du thread.
-        FIX #5 : vérifie immédiatement au démarrage, puis toutes les N minutes.
-        Utilise _stop_event.wait() plutôt que time.sleep()
-        pour pouvoir s'arrêter immédiatement sur stop().
         """
-        # FIX #5 : on vérifie dès le démarrage, sans attendre l'intervalle complet.
-        # L'ancien code attendait 60 minutes avant le premier tick, ce qui rendait
-        # les tests impossibles et pouvait manquer des événements au lancement.
+        #tant que le thread n'est pas fini (finir = déclencher stop() afin de mettre le flag interne à true, donc fini)
         while not self._stop_event.is_set():
             self._verifier_et_declencher()
             arret_demande = self._stop_event.wait(timeout=self.intervalle_minutes * 60)
             if arret_demande:
                 break
 
-    # ── Vérification des événements ──────────────────────────────────────────
-
     def _verifier_et_declencher(self) -> None:
         """
         Récupère les événements futurs et déclenche ceux qui tombent
         dans la fenêtre [maintenant, maintenant + fenetre_minutes].
         """
+        
         maintenant = datetime.now()
-        borne_basse = maintenant - timedelta(minutes=1)  # FIX #6 : tolérance d'1 minute
+        #marge d'erreur d'une minute
+        borne_basse = maintenant - timedelta(minutes=1)
+        #marge d'erreur définie dans le constructeur
         limite = maintenant + timedelta(minutes=self.fenetre_minutes)
 
-        try:
-            evenements = self._data_evt.getFuturs(self.id_profil)
-        except Exception as e:
-            _logger.error(f"Erreur lors de la récupération des événements : {e}")
-            return
+        evenements = self._data_evt.getFuturs(self.id_profil)
+
 
         for evt in evenements:
             if evt.timing is None:
@@ -145,46 +104,24 @@ class ProactiveScheduler:
 
             # L'événement est dans la fenêtre de déclenchement ?
             if borne_basse <= evt.timing <= limite:
-                self._declencher(evt, maintenant)
+                self._declencher(evt)
 
-    def _declencher(self, evt: Evenement, maintenant: datetime) -> None:
+    def _declencher(self, evt: Evenement) -> None:
         """
         Génère et affiche un message proactif pour un événement donné.
         Met à jour le statut de l'événement en BD.
         """
+        #formattage des données sous dictionnaire + création du prompt avec ces données
         contexte = self._construire_contexte(evt)
 
-        try:
-            template = _charger_prompt("proactive.txt")
-            prompt = template.format(**contexte)
-        except FileNotFoundError:
-            _logger.error("Fichier prompts/proactive.txt introuvable.")
-            return
-        except KeyError as e:
-            _logger.error(f"Variable manquante dans proactive.txt : {e}")
-            return
+        template = _charger_prompt("proactive.txt")
+        prompt = template.format(**contexte)
 
-        try:
-            message_proactif = self.llm.send_simple(prompt).strip()
-        except Exception as e:
-            _logger.error(f"Erreur LLM lors du déclenchement proactif : {e}")
-            return
-
-        _logger.info(
-            f"DÉCLENCHEMENT | profil={self.id_profil} | evt_id={evt.id} "
-            f"| timing={evt.timing} | description={evt.description!r} "
-            f"| delai={contexte['delai_evenement']} "
-            f"| message={message_proactif!r}"
-        )
-
+        #envoi du prompt au LLM
+        message_proactif = self.llm.send_simple(prompt).strip()
         _afficher_message_proactif(message_proactif)
-
-        try:
-            self._data_evt.updateEvent(evt.id, "Déclenché")
-        except Exception as e:
-            _logger.error(f"Impossible de mettre à jour le statut de l'événement {evt.id} : {e}")
-
-    # ── Construction du contexte ─────────────────────────────────────────────
+        #maj de l'event en BD
+        self._data_evt.updateEvent(evt.id, "Déclenché")
 
     def _construire_contexte(self, evt: Evenement) -> dict:
         """
@@ -198,17 +135,13 @@ class ProactiveScheduler:
 
         # Formatage des préférences
         if prefs:
-            lignes_prefs = "\n".join(
-                f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in prefs
-            )
+            lignes_prefs = "\n".join(f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in prefs)
         else:
             lignes_prefs = "  Aucune préférence enregistrée."
 
         # Formatage de la MCT du jour
         if mct_list:
-            lignes_mct = "\n".join(
-                f"  {mct.message}" for mct in reversed(mct_list)
-            )
+            lignes_mct = "\n".join(f"  {mct.message}" for mct in reversed(mct_list))
         else:
             lignes_mct = "  Aucun échange aujourd'hui pour l'instant."
 

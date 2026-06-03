@@ -1,18 +1,7 @@
-"""
-notification_timing.py — Calcul du moment de notification proactive.
-
-Responsabilité unique : étant donné un événement et son type,
-calculer QUAND le compagnon doit intervenir (pas à l'heure de l'événement lui-même).
-
-Intégration : appelé dans DetectionEvent.detecter() au moment où l'événement
-est créé en BD. Le timing stocké en BD est donc déjà le timing de notification,
-pas le timing de l'événement.
-"""
-
 from datetime import datetime, timedelta
 from enum import Enum
 
-
+#type énuméré contenant tous les types de déclencheurs proactifs possibles
 class TypeEvenement(str, Enum):
     RENDEZ_VOUS = "rendez-vous"
     EXAMEN      = "examen"
@@ -20,13 +9,7 @@ class TypeEvenement(str, Enum):
     MALADIE     = "maladie"
     BIEN_ETRE   = "bien-etre"
 
-
-# ── Règles de notification ────────────────────────────────────────────────────
-#
-# Chaque type peut produire PLUSIEURS notifications (liste de timedelta).
-# Un timedelta négatif = "avant l'événement".
-# timedelta(0)         = "au moment de l'événement" (pour maladie/bien-être).
-#
+# Chaque type peut produire PLUSIEURS notifications (liste de timedelta).#
 # Exemples :
 #   rendez-vous à 15h00 → notification à 14h00  (1h avant)
 #   examen à 09h00      → notifications à 20h00 la veille ET à 08h00 le matin
@@ -45,7 +28,7 @@ _REGLES: dict[str, list[timedelta]] = {
         timedelta(hours=-2),        # 2 heures avant (rappel urgent)
     ],
     TypeEvenement.MALADIE: [
-        timedelta(hours=2),         # 2h après la mention (prendre des nouvelles)
+        timedelta(hours=2),         # 2h après la mention (prendre des nouvelles par ex)
     ],
     TypeEvenement.BIEN_ETRE: [
         timedelta(hours=1),         # 1h après la mention
@@ -55,10 +38,7 @@ _REGLES: dict[str, list[timedelta]] = {
 # Délai par défaut si le type est inconnu
 _DEFAUT = [timedelta(hours=-1)]
 
-def calculer_timings_notification(
-    timing_evenement: datetime,
-    type_evenement: str,
-) -> list[datetime]:
+def calculer_timings_notification(timing_evenement: datetime, type_evenement: str,) -> list[datetime]:
     """
     Calcule la liste des datetimes auxquelles le compagnon doit envoyer
     un message proactif pour cet événement.
@@ -76,16 +56,15 @@ def calculer_timings_notification(
 
     timings = []
     for delta in regles:
+        #timing de l'événement + délai de notification (négatif ou positif)
         t = timing_evenement + delta
+        #on ignore les notifs qui doivent arriver dans 1 min
         if t > maintenant + marge:
             timings.append(t)
-
+    #moments futurs
     return timings
 
-def timing_principal(
-    timing_evenement: datetime,
-    type_evenement: str,
-) -> datetime | None:
+def timing_principal(timing_evenement: datetime, type_evenement: str,) -> datetime | None:
     """
     Raccourci : retourne uniquement le PREMIER timing de notification
     (le plus proche dans le temps).
