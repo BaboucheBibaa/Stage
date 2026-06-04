@@ -5,13 +5,9 @@ Un système de dialogue IA personnalisé avec mémoire court/long terme, détect
 ## Table des matières
 
 - [Vue d'ensemble](#vue-densemble)
-- [Architecture](#architecture)
 - [Installation](#installation)
-- [Configuration](#configuration)
 - [Utilisation](#utilisation)
-- [Structure du projet](#structure-du-projet)
 - [Fonctionnalités principales](#fonctionnalités-principales)
-- [Améliorations futures](#améliorations-futures)
 
 ---
 
