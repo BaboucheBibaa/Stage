@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pydantic import BaseModel
 
 @dataclass
@@ -8,12 +8,12 @@ class Message:
     role: str   # "user", "assistant", ou "system"
     contenu: str
 
-@dataclass
 class LLMResponse(BaseModel):
     contenu: str
     modele: str
     tokens_entree: int = 0
     tokens_sortie: int = 0
+
 
 class BaseLLMClient(ABC):
     """

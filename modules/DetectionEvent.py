@@ -17,7 +17,6 @@ _PROMPTS = Path(__file__).parent / "../" "prompts"
 def _charger(nom: str) -> str:
     return (_PROMPTS / nom).read_text(encoding="utf-8")
 
-
 class DetectionEvent:
     def __init__(self, llm: BaseLLMClient, evt_repo: DonneesEvenement, id_profil: int):
         self.llm = llm
@@ -25,15 +24,17 @@ class DetectionEvent:
         self.id_profil = id_profil
 
     def detecter(self, message_user: str) -> None:
+        print("Fonction detecter()\nParamètre entrée : " + message_user+ "\n\n\n")
         prompt = _charger("event_detector.txt").format(
             message_user=message_user,
             datetime_now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        raw = self.llm.send_simple(prompt).strip()
-
+        contenu_brut = self.llm.send_simple(prompt).strip()
+        print("Fonction detecter()\n Affichage du contenu brut : "+ str(contenu_brut) + "\n\n\n")
         try:
-            evenements : dict[dict[str,str]] = json.loads(raw)
+            evenements : dict[dict[str,str]] = json.loads(contenu_brut)
         except json.JSONDecodeError:
+            print("Erreur au niveau du JSON converti dans la détection d'événements")
             return
         for evt in evenements.get("evenements", []):
             try:
@@ -44,7 +45,6 @@ class DetectionEvent:
                 continue
 
             # Calcul des timings de notification selon le type
-            # ex: RDV à 15h → [14h00]  |  examen à 9h → [20h veille, 8h matin]
             timings_notif = calculer_timings_notification(timing_evenement, type_evt)
 
             if not timings_notif:
@@ -52,7 +52,6 @@ class DetectionEvent:
                 continue
 
             # On crée un enregistrement en BD par timing de notification
-            # (un examen génère 2 enregistrements : veille + matin J)
             for timing_notif in timings_notif:
                 self.evt_repo.create(Evenement(
                     id_profil=self.id_profil,

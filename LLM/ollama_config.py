@@ -8,10 +8,13 @@ class OllamaClient(BaseLLMClient):
         self._ollama = _ollama
 
     def send(self,messages: list[LLMMessage],system_prompt: str = None,) -> LLMResponse:
+        print("Fonction send()\n")
         api_messages = []
         if system_prompt:
             api_messages.append({"role": "system", "content": system_prompt})
+            
         api_messages += [{"role": m.role, "content": m.contenu} for m in messages]
+        
         response = self._ollama.chat(
             model=self.model,
             messages=api_messages,
@@ -19,14 +22,14 @@ class OllamaClient(BaseLLMClient):
             #formattage json imposé au LLM
             format='json'
         )
-        return LLMResponse(
-            contenu=response["message"]["content"],
-            modele=self.model,
-            tokens_entree=response.get("prompt_eval_count", 0),
-            tokens_sortie=response.get("eval_count", 0),
-        ) if LLMResponse.model_validate_json(response["message"]["content"]) else LLMResponse(
-            contenu="",
-            modele=self.model,
-            tokens_entree=0,
-            tokens_sortie=0
-        )
+        print("Fonction send()\n Contenu du message retourné par le LLM: "+str(response) + "\n\n\n")
+        try:
+            contenu_brut = response["message"]["content"]
+            LLMResponse(
+                contenu=contenu_brut,
+                modele=self.model,
+                tokens_entree=response.get("prompt_eval_count", 0),
+                tokens_sortie=response.get("eval_count", 0),
+            )
+        except Exception:
+            return LLMResponse(contenu="", modele=self.model)

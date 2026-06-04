@@ -49,6 +49,7 @@ class DialogueModule:
             raise RuntimeError("Impossible de créer une nouvelle conversation")
         
     def chat(self, message_user: str) -> str:
+        print("Fonction chat()\n Paramètre reçu: "+ message_user+"\n\n\n")
         """Envoie un message et reçoit une réponse personnalisée"""
         prompt_systeme = self._build_system_prompt()
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
@@ -59,15 +60,16 @@ class DialogueModule:
             messages=self._historique, 
             system_prompt=prompt_systeme
         )
-        reponse_texte = response.contenu
+        reponse_texte = response.contenu['message']
         
         # Ajouter la réponse à l'historique
         self._historique.append(LLMMessage(role="assistant", contenu=reponse_texte))
         self.detection_event.detecter(message_user)
         self._sauvegarder_message(message_user, reponse_texte)
         self._add_MCT(message_user, reponse_texte)
-        
+        print("Fonction chat()\n Sortie: "+reponse_texte+ "\n\n\n")
         return reponse_texte
+    
     def _build_system_prompt(self) -> str:
         """Construit le prompt système personnalisé"""
         return build_system_prompt(
@@ -109,7 +111,7 @@ class DialogueModule:
             if not historique:
                 print("Aucune conversation à sauvegarder dans la MLT")
                 return False
-            
+            print("Début sauvegarde MLT + résumer session")
             # Création de l'enregistrement de la mémoire long terme avec les données
             mlt_resume = resumer_session(self.llm, historique, self.data_mlt.getRecente(id_profil))
             mlt_id = self.data_mlt.create(MLT(
@@ -117,13 +119,12 @@ class DialogueModule:
                 date_creation=datetime.now(),  # Datetime object, pas string
                 text=mlt_resume
             ))
-            
+            print("Fin sauvegarde MLT")
             if mlt_id:
                 # Si ça a bien été créé, alors on vide la MCT
                 self.data_mct.nettoyage(id_profil)
                 # Rafraîchir le cache de MLT
                 self.mlt = self.data_mlt.getRecente(id_profil)
-                print(f"MLT sauvegardée avec succès (ID: {mlt_id})")
                 return True
             else:
                 print("Erreur: Impossible de sauvegarder la MLT")
@@ -135,8 +136,8 @@ class DialogueModule:
         """Ajoute une donnée dans la mémoire court terme (MCT)"""
         try:
             message_brut = resumer_echange(self.llm, msg_user, rep_assistant)
-            
-            #On tente de formatter le résultat du LLM en JSON pour voir si c'est correct ou non. On ne stocke pas le JSON, on veut juste vérifer que c'est un format valide.
+            print("fonction add_MCT()\n Affichage du message brut LLM: "+ message_brut + "\n\n\n")
+            #On tente de formatter le résultat du LLM en JSON pour voir si c'est correct ou non. On veut juste vérifer que c'est un format valide.
             try:
                 json.loads(message_brut)
                 message = message_brut
@@ -158,7 +159,6 @@ class DialogueModule:
             ))
             
             if mct_id:
-                print(f"MCT créée avec succès (ID: {mct_id})")
                 return True
             else:
                 print("Erreur: Impossible de créer la MCT")
