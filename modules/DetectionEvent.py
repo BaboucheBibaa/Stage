@@ -35,7 +35,6 @@ class DetectionEvent:
             evenements : dict[dict[str,str]] = json.loads(raw)
         except json.JSONDecodeError:
             return
-
         for evt in evenements.get("evenements", []):
             try:
                 # timing_evenement = heure réelle de l'événement (ex: 15h pour un RDV à 15h)

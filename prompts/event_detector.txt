@@ -10,7 +10,7 @@ Retourne un JSON strictement valide avec un tableau "evenements". Chaque événe
              (ex: examen le matin sans heure → 09:00:00, deadline → 23:59:00)
 - statut  : 'Planifié' si l'événement est à venir, 'Terminé' s'il est déjà passé
 
-Si le message ne contient aucun événement, retourne {"evenements": []}.
+Si le message ne contient aucun événement, retourne "evenements": [].
 Ne retourne rien d'autre que le JSON.
 
 Message:

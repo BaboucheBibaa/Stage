@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-
+from pydantic import BaseModel
 
 @dataclass
 class Message:
@@ -9,12 +9,11 @@ class Message:
     contenu: str
 
 @dataclass
-class LLMResponse:
+class LLMResponse(BaseModel):
     contenu: str
     modele: str
     tokens_entree: int = 0
     tokens_sortie: int = 0
-    reponse: dict = field(default=False,repr=False)
 
 class BaseLLMClient(ABC):
     """
@@ -44,4 +43,4 @@ class BaseLLMClient(ABC):
             messages=[Message(role="user", contenu=user_text)],
             system_prompt=system_prompt,
         )
-        return response.reponse
+        return response.contenu

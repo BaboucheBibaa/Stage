@@ -16,11 +16,17 @@ class OllamaClient(BaseLLMClient):
             model=self.model,
             messages=api_messages,
             options={"temperature": self.temperature, "num_predict": self.max_tokens},
+            #formattage json imposé au LLM
+            format='json'
         )
         return LLMResponse(
             contenu=response["message"]["content"],
             modele=self.model,
             tokens_entree=response.get("prompt_eval_count", 0),
             tokens_sortie=response.get("eval_count", 0),
-            reponse=response,
+        ) if LLMResponse.model_validate_json(response["message"]["content"]) else LLMResponse(
+            contenu="",
+            modele=self.model,
+            tokens_entree=0,
+            tokens_sortie=0
         )

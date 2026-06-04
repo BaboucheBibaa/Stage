@@ -52,17 +52,17 @@ class DialogueModule:
         """Envoie un message et reçoit une réponse personnalisée"""
         prompt_systeme = self._build_system_prompt()
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
-        self._historique.append(LLMMessage(role="user", content=message_user))
+        self._historique.append(LLMMessage(role="user", contenu=message_user))
         
         # Appeler le LLM
         response = self.llm.send(
             messages=self._historique, 
             system_prompt=prompt_systeme
         )
-        reponse_texte = response.content
+        reponse_texte = response.contenu
         
         # Ajouter la réponse à l'historique
-        self._historique.append(LLMMessage(role="assistant", content=reponse_texte))
+        self._historique.append(LLMMessage(role="assistant", contenu=reponse_texte))
         self.detection_event.detecter(message_user)
         self._sauvegarder_message(message_user, reponse_texte)
         self._add_MCT(message_user, reponse_texte)
