@@ -17,18 +17,18 @@ class DonneesProfil:
         Returns:
             Profil | None: Retourne les données du profil ou None si aucun résultat
         """
-        rows = self._db.executeFetch(
+        lignes = self._db.executeFetch(
             "SELECT * FROM Profil WHERE ID_Profil = ?",
             (id_profil,)
         )
-        if not rows:
+        if not lignes:
             return None
-        row = rows[0]
+        ligne = lignes[0]
         return Profil(
-            id=row["ID_Profil"],
-            nom=row["Nom"],
-            prenom=row["Prenom"],
-            date_naissance=row["Date_Naissance"],
+            id=ligne["ID_Profil"],
+            nom=ligne["Nom"],
+            prenom=ligne["Prenom"],
+            date_naissance=ligne["Date_Naissance"],
         )
 
     def create(self, profil: Profil) -> int:
@@ -44,10 +44,10 @@ class DonneesProfil:
             "INSERT INTO Profil (Nom, Prenom, Date_Naissance) VALUES (?, ?, ?)",
             (profil.nom, profil.prenom, datetime.strptime(profil.date_naissance, "%Y-%m-%d %H:%M:%S")),
         )
-        result = self._db.executeFetch(
+        resultat = self._db.executeFetch(
             "SELECT ID_Profil FROM Profil WHERE Nom = ? AND Prenom = ? AND Date_Naissance = ?", (profil.nom,profil.prenom,profil.date_naissance)
         )
-        return result[0]['ID_Profil'] if result else None
+        return resultat[0]['ID_Profil'] if resultat else None
 
     def update(self, profil: Profil) -> None:
         """Met à jour un profil
@@ -79,13 +79,13 @@ class DonneesPreferences:
         Returns:
             list[Preference]: Liste des préférences du profil
         """
-        rows = self._db.executeFetch(
+        lignes = self._db.executeFetch(
                 "SELECT * FROM Preferences WHERE ID_Profil = ? ORDER BY Niveau DESC",
                 (id_profil,)
             )
         return [
-            Preference(id=r["ID_Pref"], sujet=r["Sujet"], niveau=r["Niveau"], id_profil=r["ID_Profil"])
-            for r in rows
+            Preference(id=l["ID_Pref"], sujet=l["Sujet"], niveau=l["Niveau"], id_profil=l["ID_Profil"])
+            for l in lignes
         ]
 
     def create(self, pref: Preference) -> int:
@@ -101,11 +101,11 @@ class DonneesPreferences:
             "INSERT INTO Preferences (Sujet, Niveau, ID_Profil) VALUES (?, ?, ?)",
             (pref.sujet, pref.niveau, pref.id_profil),
         )
-        result = self._db.executeFetch(
+        resultat = self._db.executeFetch(
             "SELECT ID_Pref FROM Preferences WHERE ID_Profil = ? ORDER BY ID_Pref DESC LIMIT 1",
             (pref.id_profil,)
         )
-        return result[0]["ID_Pref"] if result else None
+        return resultat[0]["ID_Pref"] if resultat else None
 
     def update(self, pref: Preference) -> bool:
         """Met à jour le niveau d'une préférence existante.
@@ -136,13 +136,13 @@ class DonneesSujetSensible:
         Returns:
             list[SujetSensible]: Liste des sujets sensibles du profil, triés par niveau (décroissant)
         """
-        rows = self._db.executeFetch(
+        lignes = self._db.executeFetch(
             "SELECT * FROM Sujets_Sensibles WHERE ID_Profil = ? ORDER BY Niveau DESC",
             (id_profil,)
         )
         return [
-            SujetSensible(id=r["ID_Sujet"], sujet=r["Sujet"], niveau=r["Niveau"], id_profil=r["ID_Profil"])
-            for r in rows
+            SujetSensible(id=l["ID_Sujet"], sujet=l["Sujet"], niveau=l["Niveau"], id_profil=l["ID_Profil"])
+            for l in lignes
         ]
 
     def create(self, sujet: SujetSensible) -> int:
@@ -194,21 +194,21 @@ class DonneesCompagnon:
         Returns:
             CompagnonVirtuel | None: Données du compagnon ou None si aucun résultat
         """
-        rows = self._db.executeFetch(
+        lignes = self._db.executeFetch(
             "SELECT * FROM Compagnon_Virtuel WHERE ID_Compagnon = ?",
             (id_compagnon,)
         )
-        if not rows:
+        if not lignes:
             return None
-        row = rows[0]
+        ligne = lignes[0]
         return CompagnonVirtuel(
-            id=row["ID_Compagnon"],
-            modele=row["Modele"],
+            id=ligne["ID_Compagnon"],
+            modele=ligne["Modele"],
             profil={
-                'empathie': row["Empathie"],
-                'humour':row["Humour"],
-                'professionalisme':row["Professionalisme"],
-                'patience':row["Patience"]
+                'empathie': ligne["Empathie"],
+                'humour':ligne["Humour"],
+                'professionalisme':ligne["Professionalisme"],
+                'patience':ligne["Patience"]
             },
         )
 
@@ -272,7 +272,7 @@ class DonneesConversation:
         Returns:
             list[Conversation]: Liste des conversations récentes, triées par date décroissante
         """
-        rows = self._db.executeFetch(
+        lignes = self._db.executeFetch(
             """SELECT * FROM Conversation
                 WHERE ID_Profil = ?
                 ORDER BY Date_Creation DESC LIMIT ?""",
@@ -280,11 +280,11 @@ class DonneesConversation:
         )
         return [
             Conversation(
-                id=r["ID_Conversation"], sujet=r["Sujet"],
-                id_profil=r["ID_Profil"], id_compagnon=r["ID_Compagnon"],
-                date_creation=r["Date_Creation"],
+                id=l["ID_Conversation"], sujet=l["Sujet"],
+                id_profil=l["ID_Profil"], id_compagnon=l["ID_Compagnon"],
+                date_creation=l["Date_Creation"],
             )
-            for r in rows
+            for l in lignes
         ]
     def updateSubject(self, id_conv : int) :
         """Supprime une conversation par son identifiant
@@ -351,17 +351,17 @@ class DonneesMessage:
         Returns:
             list[Message]: Liste des messages, triés par date croissante
         """
-        rows = self._db.executeFetch(
+        lignes = self._db.executeFetch(
             "SELECT * FROM Messages WHERE ID_Conversation = ? ORDER BY Date_Message",
             (id_conversation,)
         )
         return [
             Message(
-                id=r["ID_Message"], msg_user=r["Msg_User"],
-                rep_assistant=r["Rep_Assistant"], id_conversation=r["ID_Conversation"],
-                date_message=r["Date_Message"],
+                id=l["ID_Message"], msg_user=l["Msg_User"],
+                rep_assistant=l["Rep_Assistant"], id_conversation=l["ID_Conversation"],
+                date_message=l["Date_Message"],
             )
-            for r in rows
+            for l in lignes
         ]
 
 class DonneesEvenement:
@@ -391,7 +391,7 @@ class DonneesEvenement:
         return result[0]['ID_Event'] if result else None
 
     def getFuturs(self, id_profil: int) -> list[Evenement]:
-        rows = self._db.executeFetch(
+        lignes = self._db.executeFetch(
             """SELECT * FROM Evenement
                 WHERE ID_Profil = ? AND Statut != 'Terminé' AND Timing >= NOW()
                 ORDER BY Timing""",
@@ -399,13 +399,13 @@ class DonneesEvenement:
         )
         return [
             Evenement(
-                id=r["ID_Event"],
-                timing=r["Timing"],
-                statut=r["Statut"],
-                description=r["Contexte"],
-                id_profil=r["ID_Profil"],
+                id=l["ID_Event"],
+                timing=l["Timing"],
+                statut=l["Statut"],
+                description=l["Contexte"],
+                id_profil=l["ID_Profil"],
             )
-            for r in rows
+            for l in lignes
         ]
 
 
@@ -466,8 +466,8 @@ class DonneesMLT:
             (id_profil,)
         )
         if result:
-            r = result[0]
-            return MLT(id=r["ID_MLT"], text=r["Donnees"], id_profil=r["ID_Profil"], date_creation=r["Date_Creation"])
+            l = result[0]
+            return MLT(id=l["ID_MLT"], text=l["Donnees"], id_profil=l["ID_Profil"], date_creation=l["Date_Creation"])
         return None
     
 class DonneesMCT:
@@ -507,15 +507,15 @@ class DonneesMCT:
         Returns:
             list[MCT]: Liste des échanges récents, triés par date décroissante (plus récent en premier)
         """
-        rows = self._db.executeFetch(
+        lignes = self._db.executeFetch(
             """SELECT * FROM MCT WHERE ID_Profil = ? AND DATE(Date_Creation) = ? 
                 ORDER BY Date_Creation DESC""",
             (id_profil, str(datetime.now().date())),
         )
         return [
-            MCT(id=r["ID_MCT"], message=r["Message"],
-                id_profil=r["ID_Profil"], date_creation=r["Date_Creation"])
-            for r in rows
+            MCT(id=l["ID_MCT"], message=l["Message"],
+                id_profil=l["ID_Profil"], date_creation=l["Date_Creation"])
+            for l in lignes
         ]
 
     def nettoyage(self, id_profil: int) -> None:

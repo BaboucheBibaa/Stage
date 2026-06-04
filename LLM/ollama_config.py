@@ -11,16 +11,16 @@ class OllamaClient(BaseLLMClient):
         api_messages = []
         if system_prompt:
             api_messages.append({"role": "system", "content": system_prompt})
-        api_messages += [{"role": m.role, "content": m.content} for m in messages]
+        api_messages += [{"role": m.role, "content": m.contenu} for m in messages]
         response = self._ollama.chat(
             model=self.model,
             messages=api_messages,
             options={"temperature": self.temperature, "num_predict": self.max_tokens},
         )
         return LLMResponse(
-            content=response["message"]["content"],
-            model=self.model,
-            input_tokens=response.get("prompt_eval_count", 0),
-            output_tokens=response.get("eval_count", 0),
-            raw=response,
+            contenu=response["message"]["content"],
+            modele=self.model,
+            tokens_entree=response.get("prompt_eval_count", 0),
+            tokens_sortie=response.get("eval_count", 0),
+            reponse=response,
         )

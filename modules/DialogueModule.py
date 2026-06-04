@@ -9,6 +9,7 @@ from data.dataclasses import (
 )
 from .resume import resumer_echange, resumer_session
 from .DetectionEvent import DetectionEvent
+import json
 
 class DialogueModule:
     """Gère les dialogues entre l'utilisateur et le compagnon virtuel"""
@@ -46,16 +47,17 @@ class DialogueModule:
         self._id_conversation = self._nouvelle_conversation()
         if not self._id_conversation:
             raise RuntimeError("Impossible de créer une nouvelle conversation")
+        
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
-        system_prompt = self._build_system_prompt()
+        prompt_systeme = self._build_system_prompt()
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
         self._historique.append(LLMMessage(role="user", content=message_user))
         
         # Appeler le LLM
         response = self.llm.send(
             messages=self._historique, 
-            system_prompt=system_prompt
+            system_prompt=prompt_systeme
         )
         reponse_texte = response.content
         
@@ -132,18 +134,36 @@ class DialogueModule:
     def _add_MCT(self, msg_user: str, rep_assistant: str) -> bool:
         """Ajoute une donnée dans la mémoire court terme (MCT)"""
         try:
-            resume = resumer_echange(self.llm, msg_user, rep_assistant)
+            message_brut = resumer_echange(self.llm, msg_user, rep_assistant)
+            
+            #On tente de formatter le résultat du LLM en JSON pour voir si c'est correct ou non. On ne stocke pas le JSON, on veut juste vérifer que c'est un format valide.
+            try:
+                json.loads(message_brut)
+                message = message_brut
+            except json.JSONDecodeError:
+                message = json.dumps({
+                    "sujet": message_brut,
+                    "intention_utilisateur": "",
+                    "evenements_mentionnes": [],
+                    "tags": [],
+                    "resume_reponse": [],
+                    "entites_mentionnees": [],
+                    "langue": "français"
+                })
+            
             mct_id = self.data_mct.create(MCT(
-                message=resume,
+                message=message,
                 id_profil=self.id_profil,
                 date_creation=datetime.now(),
             ))
+            
             if mct_id:
                 print(f"MCT créée avec succès (ID: {mct_id})")
                 return True
             else:
                 print("Erreur: Impossible de créer la MCT")
                 return False
+                
         except Exception as e:
             print(f"Erreur lors de l'ajout en MCT: {e}")
             return False

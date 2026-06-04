@@ -6,15 +6,15 @@ from dataclasses import dataclass, field
 class Message:
     """Un message dans une conversation."""
     role: str   # "user", "assistant", ou "system"
-    content: str
+    contenu: str
 
 @dataclass
 class LLMResponse:
-    content: str
-    model: str
-    input_tokens: int = 0
-    output_tokens: int = 0
-    raw: dict = field(default=False,repr=False)
+    contenu: str
+    modele: str
+    tokens_entree: int = 0
+    tokens_sortie: int = 0
+    reponse: dict = field(default=False,repr=False)
 
 class BaseLLMClient(ABC):
     """
@@ -41,7 +41,7 @@ class BaseLLMClient(ABC):
         Utile pour les tests rapides ou les appels internes (extraction de profil, etc.).
         """
         response = self.send(
-            messages=[Message(role="user", content=user_text)],
+            messages=[Message(role="user", contenu=user_text)],
             system_prompt=system_prompt,
         )
-        return response.content
+        return response.reponse
