@@ -25,7 +25,7 @@ class OllamaClient(BaseLLMClient):
         print("Fonction send()\n Contenu du message retourné par le LLM: "+str(response) + "\n\n\n")
         try:
             contenu_brut = response["message"]["content"]
-            LLMResponse(
+            return LLMResponse(
                 contenu=contenu_brut,
                 modele=self.model,
                 tokens_entree=response.get("prompt_eval_count", 0),

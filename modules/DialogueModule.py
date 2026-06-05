@@ -8,7 +8,7 @@ from data.dataclasses import (
     DonneesMLT, DonneesMCT,DonneesEvenement
 )
 from .resume import resumer_echange, resumer_session
-from .DetectionEvent import DetectionEvent
+from .EventDetection import DetectionEvent
 import json
 
 class DialogueModule:
@@ -60,15 +60,20 @@ class DialogueModule:
             messages=self._historique, 
             system_prompt=prompt_systeme
         )
-        reponse_texte = response.contenu['message']
+        print("Contenu retourné par le LLM")
+        print(response)
+        reponse_texte = response.contenu
         
         # Ajouter la réponse à l'historique
         self._historique.append(LLMMessage(role="assistant", contenu=reponse_texte))
+        #détection d'événement dans un message
         self.detection_event.detecter(message_user)
+        
         self._sauvegarder_message(message_user, reponse_texte)
         self._add_MCT(message_user, reponse_texte)
         print("Fonction chat()\n Sortie: "+reponse_texte+ "\n\n\n")
-        return reponse_texte
+        json_result = json.loads(reponse_texte)
+        return json_result['message']
     
     def _build_system_prompt(self) -> str:
         """Construit le prompt système personnalisé"""

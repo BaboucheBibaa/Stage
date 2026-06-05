@@ -1,31 +1,143 @@
-"""
-EventAction — Détecte si un événement planifié arrive à son timing
-et déclenche l'action proactive correspondante.
-"""
-
+from datetime import datetime, timedelta
 from data.dataclasses import DonneesEvenement
 from data.modeles import Evenement
-from datetime import datetime
+from LLM.LLMBase import BaseLLMClient
+from data.dataclasses import (
+    DonneesEvenement,
+    DonneesProfil,
+    DonneesPreferences,
+    DonneesSujetSensible,
+    DonneesCompagnon,
+    DonneesMCT,
+    DonneesMLT,
+)
+from data.modeles import Evenement
+from pathlib import Path
+
+_PROMPTS = Path(__file__).parent / "../" "prompts"
+
+def _charger_prompt(nom: str) -> str:
+    """Charge un fichier texte depuis le dossier prompts/."""
+    return (_PROMPTS / nom).read_text(encoding="utf-8")
 
 
 class EventAction:
-    def __init__(self, id_profil: int):
-        data_event = DonneesEvenement()
-        self.evenements_futurs = data_event.getFuturs(id_profil=id_profil)
+    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 5,fenetre_minutes: int = 30):
+        
+        self.llm = llm
+        self.id_profil = id_profil
+        self.intervalle_minutes = intervalle_minutes
+        self.fenetre_minutes = fenetre_minutes
 
-    def detecter_timing(self) -> list[Evenement]:
-        """
-        Retourne les événements dont le timing correspond à la minute courante.
-        """
-        maintenant = datetime.now().replace(second=0, microsecond=0)
-        declenchables = []
+        self._data_evt = DonneesEvenement()
+        self._data_profil = DonneesProfil()
+        self._data_prefs = DonneesPreferences()
+        self._data_sujets = DonneesSujetSensible()
+        self._data_compagnon = DonneesCompagnon()
+        self._data_mct = DonneesMCT()
+        self._data_mlt = DonneesMLT()
 
-        for evt in self.evenements_futurs:
+    def verifier_et_declencher(self) -> None:
+        """
+        Récupère les événements futurs et déclenche ceux qui tombent
+        dans la fenêtre [maintenant, maintenant + fenetre_minutes].
+        """
+        
+        maintenant = datetime.now()
+        #marge d'erreur d'une minute
+        borne_basse = maintenant - timedelta(minutes=1)
+        #marge d'erreur définie dans le constructeur
+        limite = maintenant + timedelta(minutes=self.fenetre_minutes)
+
+        evenements = self._data_evt.getFuturs(self.id_profil)
+
+
+        for evt in evenements:
             if evt.timing is None:
                 continue
-            # Comparer à la minute près
-            timing_arrondi = evt.timing.replace(second=0, microsecond=0)
-            if timing_arrondi == maintenant:
-                declenchables.append(evt)
 
-        return declenchables
+            # L'événement est dans la fenêtre de déclenchement ? (entre maintenant -1min et maintenant + fenetre_minute)
+            if borne_basse <= evt.timing <= limite:
+                self.__declencher(evt)
+
+    def __declencher(self, evt: Evenement) -> None:
+        """
+        Génère et affiche un message proactif pour un événement donné.
+        Met à jour le statut de l'événement en BD.
+        """
+        #formattage des données sous dictionnaire + création du prompt avec ces données
+        contexte = self._construire_contexte(evt)
+
+        template = _charger_prompt("proactive.txt")
+        prompt = template.format(**contexte)
+
+        #envoi du prompt au LLM
+        message_proactif = self.llm.send_simple(prompt).strip()
+        #affichage
+        separateur = "─" * 50
+        print(f"\n{separateur}")
+        print(f" Compagnon (message proactif) :")
+        print(f" {message_proactif}")
+        print(f"{separateur}")
+        print("Toi : ", end="", flush=True)
+              
+        #maj de l'event en BD
+        self._data_evt.updateEvent(evt.id, "Déclenché")
+
+    def _construire_contexte(self, evt: Evenement) -> dict:
+        """
+        Rassemble toutes les informations nécessaires au prompt proactif.
+        """
+        profil = self._data_profil.getProfil(self.id_profil)
+        prefs = self._data_prefs.getPreferences(self.id_profil)
+        mct_list = self._data_mct.getToday(self.id_profil)
+        mlt = self._data_mlt.getRecente(self.id_profil)
+        compagnon = self._data_compagnon.getCompagnon(1)
+
+        # Formatage des préférences
+        if prefs:
+            lignes_prefs = "\n".join(f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in prefs)
+        else:
+            lignes_prefs = "  Aucune préférence enregistrée."
+
+        # Formatage de la MCT du jour
+        if mct_list:
+            lignes_mct = "\n".join(f"  {mct.message}" for mct in reversed(mct_list))
+        else:
+            lignes_mct = "  Aucun échange aujourd'hui pour l'instant."
+
+        # Calcul de l'âge
+        age = 0
+        if profil and profil.date_naissance:
+            today = datetime.now()
+            dn = profil.date_naissance
+            age = today.year - dn.year
+            if (today.month, today.day) < (dn.month, dn.day):
+                age -= 1
+
+        delta = evt.timing - datetime.now()
+        minutes_restantes = max(0, int(delta.total_seconds() / 60))
+        if minutes_restantes == 0:
+            delai_str = "maintenant"
+        elif minutes_restantes < 60:
+            delai_str = f"dans {minutes_restantes} minute(s)"
+        else:
+            heures = minutes_restantes // 60
+            minutes_restantes_apres = minutes_restantes % 60
+            if minutes_restantes_apres > 0:
+                delai_str = f"dans environ {heures}h{minutes_restantes_apres:02d}"
+            else:
+                delai_str = f"dans environ {heures} heure(s)"
+
+        return {
+            "nom_compagnon": compagnon.modele if compagnon else "Compagnon",
+            "prenom": profil.prenom if profil else "l'utilisateur",
+            "nom": profil.nom if profil else "",
+            "age": age,
+            "description_evenement": evt.description or "événement sans description",
+            "timing_evenement": evt.timing.strftime("%d/%m/%Y à %H:%M") if evt.timing else "date inconnue",
+            "delai_evenement": delai_str,
+            "lignes_preferences": lignes_prefs,
+            "lignes_mct": lignes_mct,
+            "contenu_mlt": mlt.text if mlt else "Aucune mémoire long terme disponible.",
+        }

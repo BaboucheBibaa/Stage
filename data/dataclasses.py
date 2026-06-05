@@ -286,7 +286,7 @@ class DonneesConversation:
             )
             for l in lignes
         ]
-    def updateSubject(self, id_conv : int) :
+    def updateSubject(self, id_conv : int, sujet : str) :
         """Supprime une conversation par son identifiant
 
         Args:
@@ -296,8 +296,8 @@ class DonneesConversation:
             bool: Requête réussie ou non
         """ 
         res = self._db.execute(
-            """DELETE FROM Conversation WHERE ID_Conversation = ?""",
-                (id_conv,)
+            """UPDATE Conversation SET Sujet = ? WHERE ID_Conversation = ?""",
+                (sujet, id_conv)
         )
         return res
     
@@ -502,7 +502,6 @@ class DonneesMCT:
 
         Args:
             id_profil (int): Identifiant du profil
-            limit (int): Nombre maximum d'échanges à retourner (défaut: 10)
 
         Returns:
             list[MCT]: Liste des échanges récents, triés par date décroissante (plus récent en premier)
@@ -522,7 +521,6 @@ class DonneesMCT:
         """Nettoie la MCT en conservant seulement les K entrées les plus récentes
         Args:
             id_profil (int): Identifiant du profil
-            conserver (int): Nombre d'entrées à conserver (défaut: 20)
         Returns:
             None
         """
