@@ -5,7 +5,7 @@ Retourne un JSON strictement valide avec un tableau "evenements". Chaque événe
 
 - type    : une valeur parmi 'rendez-vous', 'examen', 'deadline', 'maladie', 'bien-etre'
 - contexte: description courte de l'événement (ex: "rendez-vous chez le médecin")
-- timing  : heure RÉELLE de l'événement au format YYYY-MM-DD HH:mm:ss
+- timing_evenement  : heure RÉELLE de l'événement au format YYYY-MM-DD HH:mm:ss
              Si l'heure exacte n'est pas précisée, utilise une heure raisonnable pour ce type
              (ex: examen le matin sans heure → 09:00:00, deadline → 23:59:00)
 - statut  : 'Planifié' si l'événement est à venir, 'Terminé' s'il est déjà passé

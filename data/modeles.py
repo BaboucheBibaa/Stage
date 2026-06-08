@@ -73,11 +73,12 @@ class Evenement:
         id (int): Identifiant unique de l'événement en BD
         id_profil (int): Identifiant du profil concerné par l'événement
         description (str): Description détaillée de l'événement
-        timing (datetime): Moment/date de l'événement
+        timing_evenement : Moment/date de l'événement indiqué
         statut (bool): État de l'événement (False=en attente, True=traité)
     """
     id: int = None
     id_profil : int = None
+    type_evenement: str = None
     description: str = None
     timing: datetime = None
     statut: bool = False

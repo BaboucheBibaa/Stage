@@ -22,7 +22,7 @@ def resumer_echange(llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> s
         msg_user=msg_user,
         rep_assistant=rep_assistant,
     )
-    return llm.send_simple(prompt).strip()
+    return llm.send_simple(prompt)
 
 def resumer_session(llm : BaseLLMClient, historique: list[MCT], mlt_existante: MLT | None) -> str:
     """

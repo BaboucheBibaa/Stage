@@ -1,10 +1,8 @@
-DROP TABLE Est_Associe;
 DROP TABLE MLT;
+DROP TABLE MCT;
 DROP TABLE Evenement;
 DROP TABLE Messages;
 DROP TABLE Conversation;
-DROP TABLE Tag_Actions;
-DROP TABLE Tag;
 DROP TABLE Compagnon_Virtuel;
 DROP TABLE Sujets_Sensibles;
 DROP TABLE Preferences;

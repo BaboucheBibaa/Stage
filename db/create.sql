@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS Evenement(
     Timing DATETIME,
     Statut VARCHAR(50) DEFAULT 'Planifié',
     ID_Profil INT NOT NULL,
+    Type_Evenement VARCHAR(15),
     CONSTRAINT fk_event_profil FOREIGN KEY (ID_Profil) 
         REFERENCES Profil(ID_Profil) ON DELETE CASCADE
 );

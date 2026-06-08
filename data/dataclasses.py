@@ -380,9 +380,9 @@ class DonneesEvenement:
             int: Identifiant de l'événement créé
         """
         self._db.execute(
-            """INSERT INTO Evenement (Timing, Statut, Contexte, ID_Profil)
-                VALUES (?, ?, ?, ?)""",
-            (evt.timing, evt.statut, evt.description, evt.id_profil),
+            """INSERT INTO Evenement (Timing, Statut, Contexte, ID_Profil, Type_Evenement)
+                VALUES (?, ?, ?, ?, ?)""",
+            (evt.timing, evt.statut, evt.description, evt.id_profil, evt.type_evenement),
         )
         result = self._db.executeFetch(
             """SELECT ID_Event FROM Evenement WHERE ID_Profil = ? ORDER BY Timing DESC LIMIT 1""",
@@ -393,7 +393,7 @@ class DonneesEvenement:
     def getFuturs(self, id_profil: int) -> list[Evenement]:
         lignes = self._db.executeFetch(
             """SELECT * FROM Evenement
-                WHERE ID_Profil = ? AND Statut != 'Terminé' AND Timing >= NOW()
+                WHERE ID_Profil = ? AND Statut != 'Déclenché' AND Timing >= NOW()
                 ORDER BY Timing""",
             (id_profil,)
         )
@@ -404,6 +404,7 @@ class DonneesEvenement:
                 statut=l["Statut"],
                 description=l["Contexte"],
                 id_profil=l["ID_Profil"],
+                type_evenement=l["Type_Evenement"]
             )
             for l in lignes
         ]
@@ -421,7 +422,7 @@ class DonneesEvenement:
         """
         res =self._db.execute(
             "UPDATE Evenement SET Statut = ? WHERE ID_Event = ?",
-            (statut, id_event),
+            (statut, id_event)
         )
         return res
 

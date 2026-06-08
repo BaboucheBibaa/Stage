@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pydantic import BaseModel
-
+import json
 @dataclass
 class Message:
     """Un message dans une conversation."""
@@ -43,4 +43,5 @@ class BaseLLMClient(ABC):
             messages=[Message(role="user", contenu=user_text)],
             system_prompt=system_prompt,
         )
-        return response.contenu
+        print("resultat send_simple : "+ str(response.contenu.strip()))
+        return response.contenu.strip()

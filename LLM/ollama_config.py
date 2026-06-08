@@ -8,7 +8,6 @@ class OllamaClient(BaseLLMClient):
         self._ollama = _ollama
 
     def send(self,messages: list[LLMMessage],system_prompt: str = None,) -> LLMResponse:
-        print("Fonction send()\n")
         api_messages = []
         if system_prompt:
             api_messages.append({"role": "system", "content": system_prompt})
@@ -22,7 +21,6 @@ class OllamaClient(BaseLLMClient):
             #formattage json imposé au LLM
             format='json'
         )
-        print("Fonction send()\n Contenu du message retourné par le LLM: "+str(response) + "\n\n\n")
         try:
             contenu_brut = response["message"]["content"]
             return LLMResponse(

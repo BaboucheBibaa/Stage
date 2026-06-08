@@ -23,7 +23,6 @@ Tu t'adresses à {prenom} {nom}, qui a {age} ans.
 Tu prends l'initiative de contacter {prenom} en raison de l'événement suivant :
 
 - Description : {description_evenement}
-- Moment prévu : {timing_evenement}
 - Délai restant : {delai_evenement}
 
 ---
