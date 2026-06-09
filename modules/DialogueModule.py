@@ -103,7 +103,7 @@ class DialogueModule:
                 date_creation=datetime.now(),
             ))
         except Exception as e:
-            print(f"Erreur lors de la sauvegarde du message: {e}")
+            print(f"Erreur lors de la sauvegarde du message: {e}")         
     def sauvegarder_MLT(self, id_profil: int) -> bool:
         """Sauvegarde la mémoire long terme (MLT) et nettoie la MCT"""
         try:
@@ -112,7 +112,7 @@ class DialogueModule:
             if not historique:
                 return False
             # Création de l'enregistrement de la mémoire long terme avec les données
-            mlt_resume = resumer_session(self.llm, historique, self.data_mlt.getRecente(id_profil))
+            mlt_resume = resumer_session(self.llm, historique)
             mlt_id = self.data_mlt.create(MLT(
                 id_profil=self.id_profil,
                 date_creation=datetime.now(),  # Datetime object, pas string

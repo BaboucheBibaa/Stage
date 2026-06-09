@@ -4,6 +4,7 @@ import threading
 
 from LLM.LLMBase import BaseLLMClient
 from .EventAction import EventAction
+from .GestionSorties import GestionSorties
 class ProactiveScheduler:
     """
     Thread de fond qui se déclenche toutes les intervalle_minutes.
@@ -14,10 +15,12 @@ class ProactiveScheduler:
         intervalle_minutes (int): Fréquence de vérification en minutes.
     """
 
-    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 5):
+    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 5, gestionnaire_sortie : GestionSorties = None):
         self.llm = llm
         self.id_profil = id_profil
         self.intervalle_minutes = intervalle_minutes
+        self._output = gestionnaire_sortie
+
         #codé en dur ici, voir pour le mettre dans le fichier de config ?
         self.fenetre_minutes = 30
         self.event_actions = EventAction(self.llm, self.id_profil, self.intervalle_minutes, self.fenetre_minutes)
@@ -41,12 +44,14 @@ class ProactiveScheduler:
         self._thread.join(timeout=5)
 
     def _boucle(self) -> None:
-        """
-        Boucle infinie du thread.
-        """
-        #tant que le thread n'est pas fini (finir = déclencher stop() afin de mettre le flag interne à true, donc fini)
+        #tant que le flag du thread est pas à true
         while not self._stop_event.is_set():
-            self.event_actions.verifier_et_declencher()
-            arret_demande = self._stop_event.wait(timeout=self.intervalle_minutes * 60)
-            if arret_demande:
-                break
+            #proactivité événementielle (vérification et déclenchement d'une action proactive si nécessaire)
+            messages = self.event_actions.verifier_et_declencher()
+            #on met en queue les événements proactifs déclenchés par la proactivité événementielle (ce sera très souvent un seul événement, mais on fait une liste au cas où plusieurs événements doivent se déclencher dans la même plage horaire)
+            for message in messages:
+                if self._output:
+                    #proactif sert surtout pour de la clarté, idéalement si on peut afficher les messages proactifs différemment.
+                    self._output.enqueue(message, source="proactif")
+            #le thread tourne toutes les x minutes
+            self._stop_event.wait(timeout=self.intervalle_minutes * 60)

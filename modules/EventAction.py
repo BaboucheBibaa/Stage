@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
-from data.dataclasses import DonneesEvenement
-from data.modeles import Evenement
+from pathlib import Path
+from enum import Enum
+
 from LLM.LLMBase import BaseLLMClient
 from data.dataclasses import (
     DonneesEvenement,
@@ -12,10 +13,9 @@ from data.dataclasses import (
     DonneesMLT,
 )
 from data.modeles import Evenement
-from pathlib import Path
-from enum import Enum
 
-#types de déclencheurs proactifs événementiels possibles
+
+# Types de déclencheurs proactifs événementiels possibles
 class TypeEvenement(str, Enum):
     RENDEZ_VOUS = "rendez-vous"
     EXAMEN      = "examen"
@@ -23,22 +23,22 @@ class TypeEvenement(str, Enum):
     MALADIE     = "maladie"
     BIEN_ETRE   = "bien-etre"
 
-# Chaque type peut produire PLUSIEURS notifications (liste de timedelta).#
 
+# Chaque type peut produire PLUSIEURS notifications (liste de timedelta).
 _REGLES: dict[str, list[timedelta]] = {
     TypeEvenement.RENDEZ_VOUS: [
         timedelta(hours=-1),        # 1 heure avant
     ],
     TypeEvenement.EXAMEN: [
-        timedelta(hours=-13),       # ~veille au soir (si exam à 9h → 20h la veille)
+        timedelta(hours=-13),       # veille au soir
         timedelta(hours=-1),        # 1 heure avant le jour J
     ],
     TypeEvenement.DEADLINE: [
         timedelta(hours=-24),       # 24 heures avant
-        timedelta(hours=-2),        # 2 heures avant (rappel urgent)
+        timedelta(hours=-2),        # 2 heures avant
     ],
     TypeEvenement.MALADIE: [
-        timedelta(hours=2),         # 2h après la mention (prendre des nouvelles par ex)
+        timedelta(hours=2),         # 2h après la mention
     ],
     TypeEvenement.BIEN_ETRE: [
         timedelta(hours=1),         # 1h après la mention
@@ -48,79 +48,81 @@ _REGLES: dict[str, list[timedelta]] = {
 # Délai par défaut si le type est inconnu
 _DEFAUT = [timedelta(hours=-1)]
 
-
 _PROMPTS = Path(__file__).parent / "../" "prompts"
+
 
 def _charger_prompt(nom: str) -> str:
     """Charge un fichier texte depuis le dossier prompts/."""
     return (_PROMPTS / nom).read_text(encoding="utf-8")
 
 class EventAction:
-    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 5,fenetre_minutes: int = 30):
-        
+    def __init__(
+        self,
+        llm: BaseLLMClient,
+        id_profil: int,
+        intervalle_minutes: int = 5,
+        fenetre_minutes: int = 30,
+    ):
         self.llm = llm
         self.id_profil = id_profil
         self.intervalle_minutes = intervalle_minutes
         self.fenetre_minutes = fenetre_minutes
 
-        self._data_evt = DonneesEvenement()
-        self._data_profil = DonneesProfil()
-        self._data_prefs = DonneesPreferences()
-        self._data_sujets = DonneesSujetSensible()
+        self._data_evt      = DonneesEvenement()
+        self._data_profil   = DonneesProfil()
+        self._data_prefs    = DonneesPreferences()
+        self._data_sujets   = DonneesSujetSensible()
         self._data_compagnon = DonneesCompagnon()
-        self._data_mct = DonneesMCT()
-        self._data_mlt = DonneesMLT()
+        self._data_mct      = DonneesMCT()
+        self._data_mlt      = DonneesMLT()
 
-    def verifier_et_declencher(self) -> None:
+    def verifier_et_declencher(self) -> list[str]:
         """
         Récupère les événements futurs et déclenche ceux qui tombent
-        dans la fenêtre [maintenant, maintenant + fenetre_minutes].
+        dans la fenêtre [maintenant - 1min, maintenant + fenetre_minutes].
+
+        Returns:
+            list[str]: Messages proactifs générés lors de ce cycle.
+                       Liste vide si aucun événement à déclencher.
         """
-        print("Fonction verifier_et_declencher()\n")
-        maintenant = datetime.now()
-        #marge d'erreur d'une minute
+        maintenant  = datetime.now()
         borne_basse = maintenant - timedelta(minutes=1)
-        #marge d'erreur définie dans le constructeur
-        limite = maintenant + timedelta(minutes=self.fenetre_minutes)
+        limite      = maintenant + timedelta(minutes=self.fenetre_minutes)
+
         evenements = self._data_evt.getFuturs(self.id_profil)
+        messages: list[str] = []
 
-        
         for evt in evenements:
-            timing_notification = self.calculer_timings_notification(evt.timing,evt.type_evenement)
-            if timing_notification == []:
-                continue
-            for timing in timing_notification:
-            # L'événement est dans la fenêtre de déclenchement ? (entre maintenant -1min et maintenant + fenetre_minute)
+            timings = self.calculer_timings_notification(evt.timing, evt.type_evenement)
+            for timing in timings:
                 if borne_basse <= timing <= limite:
-                    self.__declencher(evt)
+                    message = self.__declencher(evt)
+                    messages.append(message)
 
-    def __declencher(self, evt: Evenement) -> None:
+        return messages
+
+    def __declencher(self, evt: Evenement) -> str:
         """
-        Génère et affiche un message proactif pour un événement donné.
-        Met à jour le statut de l'événement en BD.
+        Génère un message proactif pour un événement donné et met à jour
+        son statut en base de données.
+
+        Args:
+            evt: L'événement à traiter.
+
+        Returns:
+            str: Le message proactif généré par le LLM.
         """
-        #formattage des données sous dictionnaire + création du prompt avec ces données
         contexte = self._construire_contexte(evt)
-
         template = _charger_prompt("proactive.txt")
-        prompt = template.format(**contexte)
+        prompt   = template.format(**contexte)
 
-        #envoi du prompt au LLM
-        print("pre-LLM")
         message_proactif = self.llm.send_simple(prompt)
-        print("post-LLM")
-        #affichage
-        separateur = "─" * 50
-        print(f"\n{separateur}")
-        print(f" Compagnon (message proactif) :")
-        print(f" {message_proactif}")
-        print(f"{separateur}")
-        print("Toi : ", end="", flush=True)
-              
-        #maj de l'event en BD
-        print(self._data_evt.updateEvent(evt.id, "Déclenché"))
 
-    def calculer_timings_notification(self, timing_evenement: datetime, type_evenement: str,) -> list[datetime]:
+        self._data_evt.updateEvent(evt.id, "Déclenché")
+
+        return message_proactif
+
+    def calculer_timings_notification(self,timing_evenement: datetime,type_evenement: str,) -> list[datetime]:
         """
         Calcule la liste des datetimes auxquelles le compagnon doit envoyer
         un message proactif pour cet événement.
@@ -130,31 +132,34 @@ class EventAction:
             type_evenement:   Type détecté par le LLM ('rendez-vous', 'examen', etc.).
 
         Returns:
-            Liste de datetimes de notification, filtrée pour ne garder que les moments dans le futur (> maintenant + 1 minute de marge).
+            list[datetime]: Datetimes de notification dans le futur (> maintenant + 1min).
         """
-        regles = _REGLES.get(type_evenement, _DEFAUT)
+        regles    = _REGLES.get(type_evenement, _DEFAUT)
         maintenant = datetime.now()
-        marge = timedelta(minutes=1)  # ignorer les notifications dans moins d'1 minute
+        marge     = timedelta(minutes=1)
 
         timings = []
         for delta in regles:
-            #timing de l'événement + délai de notification (négatif ou positif)
             t = timing_evenement + delta
-            #on ignore les notifs qui doivent arriver dans 1 min
             if t > maintenant + marge:
                 timings.append(t)
-        #moments futurs
-        print("timings : "+str(timings))
+
         return timings
 
     def _construire_contexte(self, evt: Evenement) -> dict:
         """
         Rassemble toutes les informations nécessaires au prompt proactif.
+
+        Args:
+            evt: L'événement pour lequel construire le contexte.
+
+        Returns:
+            dict: Dictionnaire de variables à injecter dans le template de prompt.
         """
-        profil = self._data_profil.getProfil(self.id_profil)
-        prefs = self._data_prefs.getPreferences(self.id_profil)
-        mct_list = self._data_mct.getToday(self.id_profil)
-        mlt = self._data_mlt.getRecente(self.id_profil)
+        profil    = self._data_profil.getProfil(self.id_profil)
+        prefs     = self._data_prefs.getPreferences(self.id_profil)
+        mct_list  = self._data_mct.getToday(self.id_profil)
+        mlt       = self._data_mlt.getRecente(self.id_profil)
         compagnon = self._data_compagnon.getCompagnon(1)
 
         # Formatage des préférences
@@ -163,7 +168,7 @@ class EventAction:
         else:
             lignes_prefs = "  Aucune préférence enregistrée."
 
-        # Formatage de la MCT du jour
+        # Formatage de la MCT du jour (ordre chronologique)
         if mct_list:
             lignes_mct = "\n".join(f"  {mct.message}" for mct in reversed(mct_list))
         else:
@@ -173,33 +178,35 @@ class EventAction:
         age = 0
         if profil and profil.date_naissance:
             today = datetime.now()
-            dn = profil.date_naissance
-            age = today.year - dn.year
+            dn    = profil.date_naissance
+            age   = today.year - dn.year
             if (today.month, today.day) < (dn.month, dn.day):
                 age -= 1
 
-        delta = evt.timing - datetime.now()
+        # Formatage du délai restant avant l'événement
+        delta             = evt.timing - datetime.now()
         minutes_restantes = max(0, int(delta.total_seconds() / 60))
+
         if minutes_restantes == 0:
             delai_str = "maintenant"
         elif minutes_restantes < 60:
             delai_str = f"dans {minutes_restantes} minute(s)"
         else:
-            heures = minutes_restantes // 60
-            minutes_restantes_apres = minutes_restantes % 60
-            if minutes_restantes_apres > 0:
-                delai_str = f"dans environ {heures}h{minutes_restantes_apres:02d}"
+            heures  = minutes_restantes // 60
+            minutes = minutes_restantes % 60
+            if minutes > 0:
+                delai_str = f"dans environ {heures}h{minutes:02d}"
             else:
                 delai_str = f"dans environ {heures} heure(s)"
 
         return {
-            "nom_compagnon": compagnon.modele if compagnon else "Compagnon",
-            "prenom": profil.prenom if profil else "l'utilisateur",
-            "nom": profil.nom if profil else "",
-            "age": age,
+            "nom_compagnon"       : compagnon.modele if compagnon else "Compagnon",
+            "prenom"              : profil.prenom if profil else "l'utilisateur",
+            "nom"                 : profil.nom if profil else "",
+            "age"                 : age,
             "description_evenement": evt.description or "événement sans description",
-            "delai_evenement": delai_str,
-            "lignes_preferences": lignes_prefs,
-            "lignes_mct": lignes_mct,
-            "contenu_mlt": mlt.text if mlt else "Aucune mémoire long terme disponible.",
+            "delai_evenement"     : delai_str,
+            "lignes_preferences"  : lignes_prefs,
+            "lignes_mct"          : lignes_mct,
+            "contenu_mlt"         : mlt.text if mlt else "Aucune mémoire long terme disponible.",
         }

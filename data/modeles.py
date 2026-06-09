@@ -73,8 +73,12 @@ class Evenement:
         id (int): Identifiant unique de l'événement en BD
         id_profil (int): Identifiant du profil concerné par l'événement
         description (str): Description détaillée de l'événement
-        timing_evenement : Moment/date de l'événement indiqué
-        statut (bool): État de l'événement (False=en attente, True=traité)
+        timing (datetime): Moment/date de l'événement indiqué
+        statut (str): État de l'événement ('Planifié', 'Déclenché')
+        importance (float): Score d'importance entre 0.0 (négligeable) et 1.0 (critique).
+                           Détermine si le compagnon déclenche une notification et son ton.
+                           Calculé par le LLM à la détection, affiné par des règles temporelles.
+                           Seuil de déclenchement par défaut : 0.3
     """
     id: int = None
     id_profil : int = None
@@ -82,6 +86,7 @@ class Evenement:
     description: str = None
     timing: datetime = None
     statut: bool = False
+    importance: float = 0.5
 
 @dataclass
 class MLT:

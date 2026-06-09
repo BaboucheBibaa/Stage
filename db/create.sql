@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS Evenement(
     Statut VARCHAR(50) DEFAULT 'Planifié',
     ID_Profil INT NOT NULL,
     Type_Evenement VARCHAR(15),
+    Importance FLOAT DEFAULT 0.5,
     CONSTRAINT fk_event_profil FOREIGN KEY (ID_Profil) 
         REFERENCES Profil(ID_Profil) ON DELETE CASCADE
 );

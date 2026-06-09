@@ -5,10 +5,9 @@ Retourne un JSON strictement valide avec un tableau "evenements". Chaque événe
 
 - type    : une valeur parmi 'rendez-vous', 'examen', 'deadline', 'maladie', 'bien-etre'
 - contexte: description courte de l'événement (ex: "rendez-vous chez le médecin")
-- timing_evenement  : heure RÉELLE de l'événement au format YYYY-MM-DD HH:mm:ss
-             Si l'heure exacte n'est pas précisée, utilise une heure raisonnable pour ce type
-             (ex: examen le matin sans heure → 09:00:00, deadline → 23:59:00)
+- timing_evenement  : heure de l'événement au format YYYY-MM-DD HH:mm:ss
 - statut  : 'Planifié' si l'événement est à venir, 'Terminé' s'il est déjà passé
+- importance : nombre décimal entre 0.0 et 1.0 reflétant l'importance de l'événement pour l'utilisateur.
 
 Si le message ne contient aucun événement, retourne "evenements": [].
 Ne retourne rien d'autre que le JSON.

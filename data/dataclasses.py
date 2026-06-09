@@ -380,22 +380,32 @@ class DonneesEvenement:
             int: Identifiant de l'événement créé
         """
         self._db.execute(
-            """INSERT INTO Evenement (Timing, Statut, Contexte, ID_Profil, Type_Evenement)
-                VALUES (?, ?, ?, ?, ?)""",
-            (evt.timing, evt.statut, evt.description, evt.id_profil, evt.type_evenement),
+            """INSERT INTO Evenement (Timing, Statut, Contexte, ID_Profil, Type_Evenement, Importance)
+                VALUES (?, ?, ?, ?, ?, ?)""",
+            (evt.timing, evt.statut, evt.description, evt.id_profil, evt.type_evenement, evt.importance),
         )
         result = self._db.executeFetch(
-            """SELECT ID_Event FROM Evenement WHERE ID_Profil = ? ORDER BY Timing DESC LIMIT 1""",
+            """SELECT ID_Event FROM Evenement WHERE ID_Profil = ? ORDER BY ID_Event DESC LIMIT 1""",
             (evt.id_profil,)
         )
         return result[0]['ID_Event'] if result else None
 
-    def getFuturs(self, id_profil: int) -> list[Evenement]:
+    def getFuturs(self, id_profil: int, seuil_importance: float = 0.3) -> list[Evenement]:
+        """Récupère les événements futurs dont le score d'importance dépasse le seuil.
+
+        Args:
+            id_profil (int): Identifiant du profil
+            seuil_importance (float): Score minimum pour déclencher une notification (défaut: 0.3)
+
+        Returns:
+            list[Evenement]: Événements futurs triés par timing, filtrés par importance
+        """
         lignes = self._db.executeFetch(
             """SELECT * FROM Evenement
                 WHERE ID_Profil = ? AND Statut != 'Déclenché' AND Timing >= NOW()
-                ORDER BY Timing""",
-            (id_profil,)
+                AND Importance >= ?
+                ORDER BY Importance DESC, Timing""",
+            (id_profil, seuil_importance)
         )
         return [
             Evenement(
@@ -404,11 +414,11 @@ class DonneesEvenement:
                 statut=l["Statut"],
                 description=l["Contexte"],
                 id_profil=l["ID_Profil"],
-                type_evenement=l["Type_Evenement"]
+                type_evenement=l["Type_Evenement"],
+                importance=l["Importance"] if l["Importance"] is not None else 0.5
             )
             for l in lignes
         ]
-
 
     def updateEvent(self, id_event: int, statut: str) -> None:
         """Met à jour le statut d'un événement
@@ -420,9 +430,29 @@ class DonneesEvenement:
         Returns:
             bool: Requête réussie ou non
         """
-        res =self._db.execute(
+        res = self._db.execute(
             "UPDATE Evenement SET Statut = ? WHERE ID_Event = ?",
             (statut, id_event)
+        )
+        return res
+
+    def updateImportance(self, id_event: int, importance: float) -> bool:
+        """Met à jour le score d'importance d'un événement.
+
+        Utile pour affiner le score après la détection initiale
+        (ex: recalcul basé sur la proximité temporelle).
+
+        Args:
+            id_event (int): Identifiant de l'événement
+            importance (float): Nouveau score d'importance (0.0 à 1.0)
+
+        Returns:
+            bool: Requête réussie ou non
+        """
+        importance = max(0.0, min(1.0, importance))
+        res = self._db.execute(
+            "UPDATE Evenement SET Importance = ? WHERE ID_Event = ?",
+            (importance, id_event)
         )
         return res
 
@@ -452,7 +482,20 @@ class DonneesMLT:
             (mlt.id_profil,)
         )
         return result[0]['ID_MLT'] if result else None
-    
+    def getMLT(self, id_profil : int) -> list[MLT] | None:
+        """Récupère toute la MLT d'un profil.
+
+        Args:
+            id_profil (int): Identifiant du profil
+
+        Returns:
+            list[MLT] | None: Liste de toutes les MLT du profil
+        """
+        result = self._db.executeFetch(
+            "SELECT * FROM MLT WHERE ID_Profil = ?", (id_profil,)
+        )
+        if result:
+            return [MLT(id=l['ID_MLT'], text=l['Donnees'], id_profil=l['ID_Profil'], date_creation=l['Date_Creation']) for l in result]
     def getRecente(self, id_profil: int) -> MLT | None:
         """Récupère la MLT la plus récente d'un profil
 
@@ -526,4 +569,4 @@ class DonneesMCT:
             None
         """
         self._db.execute("DELETE FROM MCT WHERE ID_Profil = ?",(id_profil,))
-        
+

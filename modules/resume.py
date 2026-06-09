@@ -24,7 +24,7 @@ def resumer_echange(llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> s
     )
     return llm.send_simple(prompt)
 
-def resumer_session(llm : BaseLLMClient, historique: list[MCT], mlt_existante: MLT | None) -> str:
+def resumer_session(llm : BaseLLMClient, historique: list[MCT]) -> str:
     """
     Résume toute la session pour mettre à jour la MLT.
     Appelé en fin de conversation (quand l'utilisateur quitte).
@@ -36,10 +36,6 @@ def resumer_session(llm : BaseLLMClient, historique: list[MCT], mlt_existante: M
     for msg in historique:
         lignes.append("Résumé de la conversation à " + str(msg.date_creation) + " :" + msg.message )
     historique_texte = "\n".join(lignes)
-
-    if not historique_texte.strip():
-        return mlt_existante
-
     prompt = _charger("resume_mlt.txt").format(
         liste_messages=historique_texte,
     )
