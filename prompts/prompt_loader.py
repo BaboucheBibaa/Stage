@@ -15,15 +15,11 @@ def format_mct(mct: md.MCT) -> str:
     except json.JSONDecodeError:
         return f"  {mct.message}"
 
-
-def build_system_prompt(
-    nom_compagnon: str,prenom: str, nom: str, age: int,profil: dict[str,float],preferences: list[md.Preference],sujets_sensibles: list[md.SujetSensible],mlt_text: str,mct_list: list[md.MCT],) -> str:
+def build_system_prompt(nom_compagnon: str,prenom: str, nom: str, age: int,profil: dict[str,float],preferences: list[md.Preference],sujets_sensibles: list[md.SujetSensible],mlt_text: str,mct_list: list[md.MCT],) -> str:
 
     # Préférences
     if preferences:
-        lignes_preferences = "\n".join(
-            f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in preferences
-        )
+        lignes_preferences = "\n".join(f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in preferences)
     else:
         lignes_preferences = "  Aucune préférence enregistrée pour l'instant."
 
@@ -51,18 +47,5 @@ def build_system_prompt(
     else:
         lignes_mct = "  Aucun échange précédent."
 
-    return _TEMPLATE.format(
-        nom_compagnon=nom_compagnon,
-        prenom=prenom, 
-        nom=nom, 
-        age=age,
-        empathie=f"{profil['empathie']:.0%}",
-        humour=f"{profil['humour']:.0%}",
-        professionalisme=f"{profil['professionalisme']:.0%}",
-        patience=f"{profil['patience']:.0%}",
-        lignes_preferences=lignes_preferences,
-        lignes_sujets_sensibles=lignes_sujets_sensibles,
-        contenu_mlt=contenu_mlt,
-        lignes_mct=lignes_mct,
-    )
+    return _TEMPLATE.format(nom_compagnon=nom_compagnon,prenom=prenom,nom=nom,age=age,empathie=f"{profil['empathie']:.0%}",humour=f"{profil['humour']:.0%}",professionalisme=f"{profil['professionalisme']:.0%}",patience=f"{profil['patience']:.0%}",lignes_preferences=lignes_preferences,lignes_sujets_sensibles=lignes_sujets_sensibles,contenu_mlt=contenu_mlt,lignes_mct=lignes_mct)
     

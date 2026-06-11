@@ -568,5 +568,5 @@ class DonneesMCT:
         Returns:
             None
         """
-        self._db.execute("DELETE FROM MCT WHERE ID_Profil = ?",(id_profil,))
-
+        res = self._db.execute("DELETE FROM MCT WHERE ID_Profil = ?",(id_profil,))
+        print(res)

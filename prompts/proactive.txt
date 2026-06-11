@@ -24,13 +24,6 @@ Tu prends l'initiative de contacter {prenom} en raison de l'événement suivant 
 
 - Description : {description_evenement}
 - Délai restant : {delai_evenement}
-- Importance évaluée : {label_importance}
-
----
-
-# CONSIGNE DE TON
-
-{consigne_ton}
 
 ---
 

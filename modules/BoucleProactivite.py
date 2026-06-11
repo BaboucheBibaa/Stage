@@ -50,6 +50,7 @@ class ProactiveScheduler:
             messages = self.event_actions.verifier_et_declencher()
             #on met en queue les événements proactifs déclenchés par la proactivité événementielle (ce sera très souvent un seul événement, mais on fait une liste au cas où plusieurs événements doivent se déclencher dans la même plage horaire)
             for message in messages:
+                print(message)
                 if self._output:
                     #proactif sert surtout pour de la clarté, idéalement si on peut afficher les messages proactifs différemment.
                     self._output.enqueue(message, source="proactif")

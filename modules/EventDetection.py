@@ -22,9 +22,9 @@ class DetectionEvent:
             message_user=message_user,
             datetime_now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        print("prompt : \n" + str(prompt))
         contenu_brut = self.llm.send_simple(prompt)
         print("Fonction detecter()\n\n")
+        print(contenu_brut)
         try:
             evenements : dict[str,list[dict[str,str]]] = json.loads(contenu_brut)
         except json.JSONDecodeError:

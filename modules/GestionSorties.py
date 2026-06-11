@@ -23,11 +23,7 @@ class GestionSorties:
     def __init__(self) -> None:
         self._queue: queue.Queue[MessageAffichage | None] = queue.Queue()
 
-    def enqueue(
-        self,
-        texte: str,
-        source: Literal["dialogue", "proactif"] = "dialogue",
-    ) -> None:
+    def enqueue(self,texte: str,source: Literal["dialogue", "proactif"] = "dialogue",) -> None:
         """
         Dépose un message dans la file.
 

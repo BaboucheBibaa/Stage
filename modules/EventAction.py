@@ -56,13 +56,7 @@ def _charger_prompt(nom: str) -> str:
     return (_PROMPTS / nom).read_text(encoding="utf-8")
 
 class EventAction:
-    def __init__(
-        self,
-        llm: BaseLLMClient,
-        id_profil: int,
-        intervalle_minutes: int = 5,
-        fenetre_minutes: int = 30,
-    ):
+    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 5,fenetre_minutes: int = 30):
         self.llm = llm
         self.id_profil = id_profil
         self.intervalle_minutes = intervalle_minutes
@@ -85,6 +79,7 @@ class EventAction:
             list[str]: Messages proactifs générés lors de ce cycle.
                        Liste vide si aucun événement à déclencher.
         """
+        print("Vérification en cours")
         maintenant  = datetime.now()
         borne_basse = maintenant - timedelta(minutes=1)
         limite      = maintenant + timedelta(minutes=self.fenetre_minutes)
@@ -112,6 +107,7 @@ class EventAction:
         Returns:
             str: Le message proactif généré par le LLM.
         """
+        print("Événement déclenché")
         contexte = self._construire_contexte(evt)
         template = _charger_prompt("proactive.txt")
         prompt   = template.format(**contexte)

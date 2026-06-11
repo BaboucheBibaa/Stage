@@ -41,7 +41,7 @@ class DialogueModule:
         self.prefs = self.data_prefs.getPreferences(id_profil)
         self.sensibles = self.data_sujets.getSujets(id_profil)
         self.mlt = self.data_mlt.getRecente(id_profil)
-        
+        self.mct = self.data_mct.getToday(id_profil)
         # Historique de la conversation
         self._historique: list[LLMMessage] = []
         self._id_conversation = self._nouvelle_conversation()
@@ -51,9 +51,10 @@ class DialogueModule:
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
         prompt_systeme = self._build_system_prompt()
+        print("Prompt système :\n\n\n\n\n\n "+ prompt_systeme + "\n\n\n\n\n")
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
         self._historique.append(LLMMessage(role="user", contenu=message_user))
-        
+        print(self._historique)
         # Appeler le LLM
         response = self.llm.send(
             messages=self._historique, 
@@ -73,6 +74,8 @@ class DialogueModule:
     
     def _build_system_prompt(self) -> str:
         """Construit le prompt système personnalisé"""
+        print("MLT: "+self.mlt.text)
+        print("MCT: "+ str(self.mct))
         return build_system_prompt(
             nom_compagnon=self.compagnon.modele,
             prenom=self.profil.prenom,
@@ -82,7 +85,7 @@ class DialogueModule:
             preferences=self.prefs,
             sujets_sensibles=self.sensibles,
             mlt_text=self.mlt.text if self.mlt else "",
-            mct_list=self.data_mct.getToday(self.id_profil),
+            mct_list=self.mct,
         )
     def _nouvelle_conversation(self) -> int:
         """Crée une nouvelle conversation"""
@@ -106,29 +109,28 @@ class DialogueModule:
             print(f"Erreur lors de la sauvegarde du message: {e}")         
     def sauvegarder_MLT(self, id_profil: int) -> bool:
         """Sauvegarde la mémoire long terme (MLT) et nettoie la MCT"""
-        try:
-            # Récupération de la discussion de la journée
-            historique = self.data_mct.getToday(id_profil)
-            if not historique:
-                return False
-            # Création de l'enregistrement de la mémoire long terme avec les données
-            mlt_resume = resumer_session(self.llm, historique)
-            mlt_id = self.data_mlt.create(MLT(
-                id_profil=self.id_profil,
-                date_creation=datetime.now(),  # Datetime object, pas string
-                text=mlt_resume
-            ))
-            if mlt_id:
-                # Si ça a bien été créé, alors on vide la MCT
-                self.data_mct.nettoyage(id_profil)
-                # Rafraîchir le cache de MLT
-                self.mlt = self.data_mlt.getRecente(id_profil)
-                return True
-            else:
-                print("Erreur: Impossible de sauvegarder la MLT")
-                return False
-        except Exception as e:
-            print(f"Erreur lors de la sauvegarde de la MLT: {e}")
+        print("Sauvegarde MLT appelée")
+        # Récupération de la discussion de la journée
+        historique = self.data_mct.getToday(id_profil)
+        if not historique:
+            return False
+        # Création de l'enregistrement de la mémoire long terme avec les données
+        mlt_resume = resumer_session(self.llm, historique)
+        mlt_id = self.data_mlt.create(MLT(
+            id_profil=self.id_profil,
+            date_creation=datetime.now(),  # Datetime object, pas string
+            text=mlt_resume
+        ))
+        if mlt_id:
+            # Si ça a bien été créé, alors on vide la MCT
+            self.data_mct.nettoyage(id_profil)
+            print("Nettoyage effectué !")
+            print("Identifiant du profil : "+ str(id_profil))
+            # Rafraîchir le cache de MLT
+            self.mlt = self.data_mlt.getRecente(id_profil)
+            return True
+        else:
+            print("Erreur: Impossible de sauvegarder la MLT")
             return False
     def _add_MCT(self, msg_user: str, rep_assistant: str) -> bool:
         """Ajoute une donnée dans la mémoire court terme (MCT)"""
