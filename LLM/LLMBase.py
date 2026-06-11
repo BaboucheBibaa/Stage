@@ -27,14 +27,14 @@ class BaseLLMClient(ABC):
         self.max_tokens = max_tokens
 
     @abstractmethod
-    def send(self,messages: list[Message],system_prompt: str = None,) -> LLMResponse:
+    def send(self,messages: list[Message],json_schema: object,system_prompt: str = None) -> LLMResponse:
         """
         Envoie une liste de messages et retourne une réponse normalisée.
         C'est la seule méthode que le reste du projet appelle.
         """
         ...
 
-    def send_simple(self, user_text: str, system_prompt: str = None) -> str:
+    def send_simple(self, user_text: str, json_schema : object, system_prompt: str = None) -> str:
         """
         Raccourci pour un échange simple : texte vers texte.
         Utile pour les tests rapides ou les appels internes (extraction de profil, etc.).
@@ -42,5 +42,6 @@ class BaseLLMClient(ABC):
         response = self.send(
             messages=[Message(role="user", contenu=user_text)],
             system_prompt=system_prompt,
+            json_schema = json_schema
         )
         return response.contenu.strip()

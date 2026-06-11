@@ -112,7 +112,7 @@ class EventAction:
         template = _charger_prompt("proactive.txt")
         prompt   = template.format(**contexte)
 
-        message_proactif = self.llm.send_simple(prompt)
+        message_proactif = self.llm.send(prompt)
 
         self._data_evt.updateEvent(evt.id, "Déclenché")
 

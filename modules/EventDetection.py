@@ -1,9 +1,9 @@
 from LLM.LLMBase import BaseLLMClient
 from data.dataclasses import DonneesEvenement
 from data.modeles import Evenement
-import json
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
+from data.output_models import EventDetectorOutput
 
 _PROMPTS = Path(__file__).parent / "../" "prompts"
 
@@ -19,32 +19,39 @@ class DetectionEvent:
 
     def detecter(self, message_user: str) -> None:
         prompt = _charger("event_detector.txt").format(
-            message_user=message_user,
             datetime_now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        contenu_brut = self.llm.send_simple(prompt)
-        print("Fonction detecter()\n\n")
+        llm_reponse = self.llm.send_simple(user_text=message_user, system_prompt=prompt, json_schema=EventDetectorOutput.model_json_schema())
+        print("llm reponse : "+str(llm_reponse))
+        #model structuré de la réponse du LLM
+        contenu_brut = EventDetectorOutput.model_validate_json(llm_reponse)
         print(contenu_brut)
-        try:
-            evenements : dict[str,list[dict[str,str]]] = json.loads(contenu_brut)
-        except json.JSONDecodeError:
-            print("Erreur au niveau du JSON converti dans la détection d'événements")
+        
+        if contenu_brut.Timing_Evenement is None:
             return
-        liste_events = evenements.get("evenements", [])
-        for evt in liste_events:
-            # timing_evenement = heure réelle de l'événement
-            timing_evenement = datetime.strptime(evt["timing_evenement"], "%Y-%m-%d %H:%M:%S")
-            # importance : score fourni par le LLM, borné entre 0.0 et 1.0
-            importance_brute = evt.get("importance", 0.5)
-            try:
-                importance = max(0.0, min(1.0, float(importance_brute)))
-            except (ValueError, TypeError):
-                importance = 0.5
-            self.evt_repo.create(Evenement(
-                id_profil=self.id_profil,
-                description=evt['contexte'],
-                timing=timing_evenement,
-                statut='Planifié',
-                type_evenement=evt['type'],
-                importance=importance,
-            ))
+        
+        confiance = float(contenu_brut.Confiance or 0.0)
+        if confiance < 0.6:
+            return
+        
+        importance = max(0.0, min(1.0, float(contenu_brut.Importance or 0.5)))
+        if importance < 0.3:
+            return
+
+        # timing_evenement = heure réelle de l'événement
+        timing_evenement = contenu_brut.Timing_Evenement
+        # importance : score fourni par le LLM, borné entre 0.0 et 1.0
+        importance_brute = contenu_brut.Importance or 0.5
+        try:
+            importance = max(0.0, min(1.0, float(importance_brute)))
+        except (ValueError, TypeError):
+            importance = 0.5
+        print(contenu_brut.Type.value)
+        self.evt_repo.create(Evenement(
+            id_profil=self.id_profil,
+            description=contenu_brut.Contexte,
+            timing=timing_evenement,
+            statut='Planifié',
+            type_evenement=contenu_brut.Type.value,
+            importance=importance,
+        ))

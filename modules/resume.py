@@ -5,7 +5,8 @@ Utilisé par le DialogueManager pour alimenter la MCT et la MLT.
 
 from pathlib import Path
 from LLM.LLMBase import BaseLLMClient
-from data.modeles import MCT,MLT
+from data.modeles import MCT
+from data.output_models import ResumeMCTOutput,ResumeMLTOutput
 
 _PROMPTS = Path(__file__).parent / "../" "prompts"
 
@@ -14,7 +15,7 @@ def _charger(nom: str) -> str:
     return (_PROMPTS / nom).read_text(encoding="utf-8")
 
 
-def resumer_echange(llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> str:
+def resumer_echange(llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> ResumeMCTOutput:
     """
     Résume un échange en une phrase courte pour la MCT.
     """
@@ -22,9 +23,11 @@ def resumer_echange(llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> s
         msg_user=msg_user,
         rep_assistant=rep_assistant,
     )
-    return llm.send_simple(prompt)
+    res = llm.send_simple(prompt, ResumeMCTOutput.model_json_schema())
+    resume = ResumeMCTOutput.model_validate_json(res)
+    return resume
 
-def resumer_session(llm : BaseLLMClient, historique: list[MCT]) -> str:
+def resumer_session(llm : BaseLLMClient, historique: list[MCT]) -> ResumeMLTOutput:
     """
     Résume toute la session pour mettre à jour la MLT.
     Appelé en fin de conversation (quand l'utilisateur quitte).
@@ -39,4 +42,6 @@ def resumer_session(llm : BaseLLMClient, historique: list[MCT]) -> str:
     prompt = _charger("resume_mlt.txt").format(
         liste_messages=historique_texte,
     )
-    return llm.send_simple(prompt).strip()
+    res = llm.send_simple(prompt, ResumeMLTOutput.model_json_schema())
+    resume = ResumeMLTOutput.model_validate_json(res)
+    return resume

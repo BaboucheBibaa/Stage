@@ -7,6 +7,8 @@ from data.dataclasses import (
     DonneesCompagnon, DonneesConversation, DonneesMessage,
     DonneesMLT, DonneesMCT,DonneesEvenement
 )
+
+from data.output_models import GeneralOutput
 from .resume import resumer_echange, resumer_session
 from .EventDetection import DetectionEvent
 import json
@@ -51,31 +53,28 @@ class DialogueModule:
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
         prompt_systeme = self._build_system_prompt()
-        print("Prompt système :\n\n\n\n\n\n "+ prompt_systeme + "\n\n\n\n\n")
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
         self._historique.append(LLMMessage(role="user", contenu=message_user))
-        print(self._historique)
         # Appeler le LLM
         response = self.llm.send(
             messages=self._historique, 
-            system_prompt=prompt_systeme
+            system_prompt=prompt_systeme,
+            #format d'output général à une discussion basique.
+            json_schema=GeneralOutput.model_json_schema()
         )
-        reponse_texte = response.contenu
+        reponse_obj = GeneralOutput.model_validate_json(response.contenu)
         
         # Ajouter la réponse à l'historique
-        self._historique.append(LLMMessage(role="assistant", contenu=reponse_texte))
+        self._historique.append(LLMMessage(role="assistant", contenu=reponse_obj.Message))
         #détection d'événement dans un message
         self.detection_event.detecter(message_user)
         
-        self._sauvegarder_message(message_user, reponse_texte)
-        self._add_MCT(message_user, reponse_texte)
-        json_result = json.loads(reponse_texte)
-        return json_result['message']
+        self._sauvegarder_message(message_user, reponse_obj.Message)
+        self._add_MCT(message_user, reponse_obj.Message)
+        return reponse_obj.Message
     
     def _build_system_prompt(self) -> str:
         """Construit le prompt système personnalisé"""
-        print("MLT: "+self.mlt.text)
-        print("MCT: "+ str(self.mct))
         return build_system_prompt(
             nom_compagnon=self.compagnon.modele,
             prenom=self.profil.prenom,
@@ -109,7 +108,6 @@ class DialogueModule:
             print(f"Erreur lors de la sauvegarde du message: {e}")         
     def sauvegarder_MLT(self, id_profil: int) -> bool:
         """Sauvegarde la mémoire long terme (MLT) et nettoie la MCT"""
-        print("Sauvegarde MLT appelée")
         # Récupération de la discussion de la journée
         historique = self.data_mct.getToday(id_profil)
         if not historique:
@@ -118,14 +116,12 @@ class DialogueModule:
         mlt_resume = resumer_session(self.llm, historique)
         mlt_id = self.data_mlt.create(MLT(
             id_profil=self.id_profil,
-            date_creation=datetime.now(),  # Datetime object, pas string
-            text=mlt_resume
+            date_creation=datetime.now(),  # Datetime objet, pas string
+            text=mlt_resume.model_dump_json()
         ))
         if mlt_id:
             # Si ça a bien été créé, alors on vide la MCT
             self.data_mct.nettoyage(id_profil)
-            print("Nettoyage effectué !")
-            print("Identifiant du profil : "+ str(id_profil))
             # Rafraîchir le cache de MLT
             self.mlt = self.data_mlt.getRecente(id_profil)
             return True
@@ -135,21 +131,10 @@ class DialogueModule:
     def _add_MCT(self, msg_user: str, rep_assistant: str) -> bool:
         """Ajoute une donnée dans la mémoire court terme (MCT)"""
         try:
-            message_brut = resumer_echange(self.llm, msg_user, rep_assistant)
-            #On tente de formatter le résultat du LLM en JSON pour voir si c'est correct ou non. On veut juste vérifer que c'est un format valide.
-            try:
-                json.loads(message_brut)
-                message = message_brut
-            except json.JSONDecodeError:
-                message = json.dumps({
-                    "sujet": message_brut,
-                    "intention_utilisateur": "",
-                    "evenements_mentionnes": [],
-                    "tags": [],
-                    "resume_reponse": [],
-                    "entites_mentionnees": [],
-                    "langue": "français"
-                })
+            resume_obj = resumer_echange(self.llm, msg_user, rep_assistant)
+            
+            # Convertir l'objet Pydantic en JSON pour le stocker
+            message = resume_obj.model_dump_json()
             
             mct_id = self.data_mct.create(MCT(
                 message=message,

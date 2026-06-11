@@ -7,27 +7,23 @@ class OllamaClient(BaseLLMClient):
         self.base_url = base_url
         self._ollama = _ollama
 
-    def send(self,messages: list[LLMMessage],system_prompt: str = None,) -> LLMResponse:
+    def send(self,messages: list[LLMMessage],json_schema : object, system_prompt: str = None,) -> LLMResponse:
         api_messages = []
         if system_prompt:
             api_messages.append({"role": "system", "content": system_prompt})
             
         api_messages += [{"role": m.role, "content": m.contenu} for m in messages]
-        
         response = self._ollama.chat(
             model=self.model,
             messages=api_messages,
             options={"temperature": self.temperature, "num_predict": self.max_tokens},
-            #formattage json imposé au LLM
-            format='json'
+            format=json_schema
         )
         try:
             contenu_brut = response["message"]["content"]
             return LLMResponse(
                 contenu=contenu_brut,
                 modele=self.model,
-                tokens_entree=response.get("prompt_eval_count", 0),
-                tokens_sortie=response.get("eval_count", 0),
             )
         except Exception:
             return LLMResponse(contenu="", modele=self.model)
