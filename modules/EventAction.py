@@ -13,16 +13,7 @@ from data.dataclasses import (
     DonneesMLT,
 )
 from data.modeles import Evenement
-
-
-# Types de déclencheurs proactifs événementiels possibles
-class TypeEvenement(str, Enum):
-    RENDEZ_VOUS = "rendez-vous"
-    EXAMEN      = "examen"
-    DEADLINE    = "deadline"
-    MALADIE     = "maladie"
-    BIEN_ETRE   = "bien-etre"
-
+from data.output_models import TypeEvenement
 
 # Chaque type peut produire PLUSIEURS notifications (liste de timedelta).
 _REGLES: dict[str, list[timedelta]] = {

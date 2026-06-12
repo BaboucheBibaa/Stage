@@ -4,38 +4,38 @@ from datetime import datetime
 
 class TypeEvenement(str, Enum):
     RENDEZ_VOUS = "rendez-vous"
-    BIEN_ETRE = "bien-être"
+    BIEN_ETRE = "bien-etre"
     DEADLINE = "deadline"
     MALADIE = "maladie"
     EXAMEN = "examen"
 
 class EventDetectorOutput(BaseModel):
-    Type: TypeEvenement = None
-    Contexte: str = None
-    Timing_Evenement: datetime= None
-    Importance: float = None
-    Confiance: float = None
+    Type: TypeEvenement
+    Evenement: str
+    Timing_Evenement: datetime
+    Importance: float 
+    Confiance: float
     
 class ResumeMCTOutput(BaseModel):
-    Sujet : str = None
-    Intention : str = None
-    Evenements_Mentionnes : list[str] = None
-    Resume_Reponse : list[str] = None
-    Entites_Mentionnees : list[str] = None
-    Langue : str = None
-    Tags : list[str] = None
+    Sujet : str 
+    Intention : str 
+    Evenements_Mentionnes : list[str] 
+    Resume_Reponse : list[str] 
+    Entites_Mentionnees : list[str] 
+    Langue : str 
+    Tags : list[str] 
 
 class ResumeMLTOutput(BaseModel):
-    Date : datetime = None
-    Nombre_Echanges : int = None
-    Humeur_Generale : str = None
-    Themes_Du_Jour : list[str] = None
-    Taches_Et_Demandes : list[dict[str,str]] = None
-    Sujet_D_Interet : list[str] = None
-    Evenements_Mentionnes : list[str] = None
-    Points_attention : list[str] = None
-    Resume_Journee : str = None
+    Date : datetime 
+    Nombre_Echanges : int 
+    Humeur_Generale : str 
+    Themes_Du_Jour : list[str] 
+    Taches_Et_Demandes : list[dict[str,str]] 
+    Sujet_D_Interet : list[str] 
+    Evenements_Mentionnes : list[str] 
+    Points_attention : list[str] 
+    Resume_Journee : str 
 
 
 class GeneralOutput(BaseModel):
-    Message: str = None
+    Message: str 

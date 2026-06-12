@@ -43,5 +43,6 @@ def resumer_session(llm : BaseLLMClient, historique: list[MCT]) -> ResumeMLTOutp
         liste_messages=historique_texte,
     )
     res = llm.send_simple(prompt, ResumeMLTOutput.model_json_schema())
+    print(res)
     resume = ResumeMLTOutput.model_validate_json(res)
     return resume

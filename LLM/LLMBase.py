@@ -21,7 +21,7 @@ class BaseLLMClient(ABC):
     Tout le reste du code n'utilise que cette interface.
     """
 
-    def __init__(self, model: str, temperature: float, max_tokens: int = 512):
+    def __init__(self, model: str, temperature: float, max_tokens: int = 1024):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens

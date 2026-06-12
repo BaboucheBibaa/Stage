@@ -46,10 +46,9 @@ class DetectionEvent:
             importance = max(0.0, min(1.0, float(importance_brute)))
         except (ValueError, TypeError):
             importance = 0.5
-        print(contenu_brut.Type.value)
         self.evt_repo.create(Evenement(
             id_profil=self.id_profil,
-            description=contenu_brut.Contexte,
+            description=contenu_brut.Evenement,
             timing=timing_evenement,
             statut='Planifié',
             type_evenement=contenu_brut.Type.value,
