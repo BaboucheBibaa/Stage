@@ -3,20 +3,20 @@ PromptLoader — charge et formate l'unique template system_prompt.txt.
 """
 
 from pathlib import Path
-import data.modeles as md
+from projectTypes import MCT, SujetSensible, Preference
 import json
 from datetime import datetime
 
 _TEMPLATE = (Path(__file__).parent / "system_prompt.txt").read_text(encoding="utf-8")
 
-def format_mct(mct: md.MCT) -> str:
+def format_mct(mct: MCT) -> str:
     try:
         data : dict = json.loads(mct.message)
         return f"  [{mct.date_creation:%H:%M}] {data.get('sujet','')} — {data.get('intention_utilisateur','')}"
     except json.JSONDecodeError:
         return f"  {mct.message}"
 
-def build_system_prompt(nom_compagnon: str,prenom: str, nom: str, age: int,profil: dict[str,float],preferences: list[md.Preference],sujets_sensibles: list[md.SujetSensible],mlt_text: str,mct_list: list[md.MCT],) -> str:
+def build_system_prompt(nom_compagnon: str,prenom: str, nom: str, age: int,profil: dict[str,float],preferences: list[Preference],sujets_sensibles: list[SujetSensible],mlt_text: str,mct_list: list[MCT],) -> str:
 
     # Préférences
     if preferences:

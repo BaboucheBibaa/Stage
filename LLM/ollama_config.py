@@ -1,4 +1,4 @@
-from .LLMBase import BaseLLMClient, Message as LLMMessage, LLMResponse
+from projectTypes import LLMResponse, LLMMessage,BaseLLMClient
 import ollama  as _ollama
 class OllamaClient(BaseLLMClient):
     def __init__(self,model: str = "mistral",base_url: str = "http://localhost:11434",temperature: float = 0.7,**kwargs):

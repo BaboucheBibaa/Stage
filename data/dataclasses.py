@@ -1,5 +1,5 @@
 from .bd import Database
-from .modeles import Conversation, Profil, Preference, Message, MLT, MCT, SujetSensible, CompagnonVirtuel, Evenement
+from projectTypes import Conversation, Profil, Preference, Message, MLT, MCT, SujetSensible, CompagnonVirtuel, Evenement
 from datetime import datetime
 
 class DonneesProfil:

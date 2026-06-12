@@ -1,10 +1,7 @@
-from LLM.LLMBase import BaseLLMClient
+from projectTypes import BaseLLMClient, Evenement, EventDetectorOutput, LLMMessage
 from data.dataclasses import DonneesEvenement
-from data.modeles import Evenement
 from pathlib import Path
 from datetime import datetime
-from data.output_models import EventDetectorOutput
-from LLM.ollama_config import LLMMessage
 _PROMPTS = Path(__file__).parent / "../" "prompts"
 
 

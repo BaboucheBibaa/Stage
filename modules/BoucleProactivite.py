@@ -2,7 +2,7 @@
 
 import threading
 
-from LLM.LLMBase import BaseLLMClient
+from projectTypes import BaseLLMClient
 from .EventAction import EventAction
 from .GestionSorties import GestionSorties
 class ProactiveScheduler:

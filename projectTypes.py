@@ -1,5 +1,68 @@
+from pydantic import BaseModel
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+from typing import Optional
+from abc import ABC, abstractmethod
+
+@dataclass
+class LLMMessage:
+    """Un message tel qu'il est interprété par un LLM, il contient obligatoirement un rôle et un contenu (voir docu Ollama / OpenAI)."""
+    role: str   # "user", "assistant", ou "system"
+    contenu: str
+
+class LLMResponse(BaseModel):
+    """Format de sortie d'un LLM."""
+    contenu: str
+    modele: str
+    tokens_entree: int = 0
+    tokens_sortie: int = 0
+
+# --------------------------------- modèles des types reçus par le LLM -----------------------------------------
+
+
+class TypeEvenement(str, Enum):
+    RENDEZ_VOUS = "rendez-vous"
+    BIEN_ETRE = "bien-etre"
+    DEADLINE = "deadline"
+    MALADIE = "maladie"
+    EXAMEN = "examen"
+
+class EventDetectorOutput(BaseModel):
+    Type: TypeEvenement
+    Evenement: str
+    Timing_Evenement: Optional[datetime] 
+    Importance: float 
+    Confiance: float
+    
+class ResumeMCTOutput(BaseModel):
+    Sujet : str 
+    Intention : str 
+    Evenements_Mentionnes : list[str] 
+    Resume_Reponse : list[str] 
+    Entites_Mentionnees : list[str] 
+    Langue : str 
+    Tags : list[str] 
+
+class ResumeMLTOutput(BaseModel):
+    Date : datetime 
+    Nombre_Echanges : int 
+    Humeur_Generale : str 
+    Themes_Du_Jour : list[str] 
+    Taches_Et_Demandes : list[dict[str,str]] 
+    Sujet_D_Interet : list[str] 
+    Evenements_Mentionnes : list[str] 
+    Points_attention : list[str] 
+    Resume_Journee : str 
+
+
+class GeneralOutput(BaseModel):
+    Message: str 
+
+
+
+
+# -------------------------- modèles des types en BD ----------------------------------------------
 @dataclass
 class Profil:
     """Profil utilisateur — Représente un utilisateur du système.
@@ -184,3 +247,25 @@ class CompagnonVirtuel:
     id : int = None
     modele: str = "mistral"
     profil : dict[str,str] = None
+    
+    
+
+#------------------------------------------ Classe abstraite ----------------------------------------------------
+class BaseLLMClient(ABC):
+    """
+    Interface commune pour tous les fournisseurs LLM.
+    Tout le reste du code n'utilise que cette interface.
+    """
+
+    def __init__(self, model: str, temperature: float, max_tokens: int = 1024):
+        self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+
+    @abstractmethod
+    def send(self,messages: list[LLMMessage],json_schema: object = None ,system_prompt: str = None) -> LLMResponse:
+        """
+        Envoie une liste de messages et retourne une réponse normalisée.
+        C'est la seule méthode que le reste du projet appelle.
+        """
+        ...

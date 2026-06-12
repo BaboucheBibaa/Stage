@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from enum import Enum
 
-from LLM.LLMBase import BaseLLMClient
+from projectTypes import BaseLLMClient,Evenement, TypeEvenement
 from data.dataclasses import (
     DonneesEvenement,
     DonneesProfil,
@@ -12,8 +12,6 @@ from data.dataclasses import (
     DonneesMCT,
     DonneesMLT,
 )
-from data.modeles import Evenement
-from data.output_models import TypeEvenement
 from LLM.ollama_config import LLMMessage
 
 # Chaque type peut produire PLUSIEURS notifications (liste de timedelta).

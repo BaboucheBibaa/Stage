@@ -4,10 +4,7 @@ Utilisé par le DialogueManager pour alimenter la MCT et la MLT.
 """
 
 from pathlib import Path
-from LLM.LLMBase import BaseLLMClient
-from data.modeles import MCT
-from data.output_models import ResumeMCTOutput,ResumeMLTOutput
-from LLM.ollama_config import LLMMessage
+from projectTypes import BaseLLMClient,MCT, ResumeMCTOutput, ResumeMLTOutput,LLMMessage
 _PROMPTS = Path(__file__).parent / "../" "prompts"
 
 

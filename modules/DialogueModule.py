@@ -1,14 +1,11 @@
 from datetime import datetime
-from data.modeles import Conversation, Message, MCT, MLT
-from LLM.LLMBase import Message as LLMMessage, BaseLLMClient
+from projectTypes import LLMMessage, BaseLLMClient, Conversation, Message, MCT, MLT,GeneralOutput
 from prompts.SysPromptLoader import build_system_prompt
 from data.dataclasses import (
     DonneesProfil, DonneesPreferences, DonneesSujetSensible,
     DonneesCompagnon, DonneesConversation, DonneesMessage,
     DonneesMLT, DonneesMCT,DonneesEvenement
 )
-
-from data.output_models import GeneralOutput
 from .resume import resumer_echange, resumer_session
 from .EventDetection import DetectionEvent
 
