@@ -1,0 +1,5 @@
+Voici les résumés des conversations de la journée :
+
+{liste_messages}
+
+Génère maintenant la synthèse de la journée.

@@ -14,6 +14,7 @@ from data.dataclasses import (
 )
 from data.modeles import Evenement
 from data.output_models import TypeEvenement
+from LLM.ollama_config import LLMMessage
 
 # Chaque type peut produire PLUSIEURS notifications (liste de timedelta).
 _REGLES: dict[str, list[timedelta]] = {
@@ -70,11 +71,10 @@ class EventAction:
             list[str]: Messages proactifs générés lors de ce cycle.
                        Liste vide si aucun événement à déclencher.
         """
-        print("Vérification en cours")
         maintenant  = datetime.now()
         borne_basse = maintenant - timedelta(minutes=1)
         limite      = maintenant + timedelta(minutes=self.fenetre_minutes)
-
+        
         evenements = self._data_evt.getFuturs(self.id_profil)
         messages: list[str] = []
 
@@ -84,7 +84,6 @@ class EventAction:
                 if borne_basse <= timing <= limite:
                     message = self.__declencher(evt)
                     messages.append(message)
-
         return messages
 
     def __declencher(self, evt: Evenement) -> str:
@@ -98,17 +97,16 @@ class EventAction:
         Returns:
             str: Le message proactif généré par le LLM.
         """
-        print("Événement déclenché")
         contexte = self._construire_contexte(evt)
-        template = _charger_prompt("proactive.txt")
-        prompt   = template.format(**contexte)
-
-        message_proactif = self.llm.send(prompt)
-
+        system_prompt   = _charger_prompt("proactive/proactive_system.txt").format(**contexte)
+        user_prompt = _charger_prompt("proactive/proactive_user.txt").format(**contexte)
+        message_proactif = self.llm.send(
+            messages= [LLMMessage(role="user", contenu=user_prompt)],
+            system_prompt=system_prompt
+        )
         self._data_evt.updateEvent(evt.id, "Déclenché")
-
         return message_proactif
-
+    
     def calculer_timings_notification(self,timing_evenement: datetime,type_evenement: str,) -> list[datetime]:
         """
         Calcule la liste des datetimes auxquelles le compagnon doit envoyer

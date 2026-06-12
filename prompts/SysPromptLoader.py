@@ -5,6 +5,7 @@ PromptLoader — charge et formate l'unique template system_prompt.txt.
 from pathlib import Path
 import data.modeles as md
 import json
+from datetime import datetime
 
 _TEMPLATE = (Path(__file__).parent / "system_prompt.txt").read_text(encoding="utf-8")
 
@@ -47,5 +48,5 @@ def build_system_prompt(nom_compagnon: str,prenom: str, nom: str, age: int,profi
     else:
         lignes_mct = "  Aucun échange précédent."
 
-    return _TEMPLATE.format(nom_compagnon=nom_compagnon,prenom=prenom,nom=nom,age=age,empathie=f"{profil['empathie']:.0%}",humour=f"{profil['humour']:.0%}",professionalisme=f"{profil['professionalisme']:.0%}",patience=f"{profil['patience']:.0%}",lignes_preferences=lignes_preferences,lignes_sujets_sensibles=lignes_sujets_sensibles,contenu_mlt=contenu_mlt,lignes_mct=lignes_mct)
+    return _TEMPLATE.format(date_jour=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),nom_compagnon=nom_compagnon,prenom=prenom,nom=nom,age=age,empathie=f"{profil['empathie']:.0%}",humour=f"{profil['humour']:.0%}",professionalisme=f"{profil['professionalisme']:.0%}",patience=f"{profil['patience']:.0%}",lignes_preferences=lignes_preferences,lignes_sujets_sensibles=lignes_sujets_sensibles,contenu_mlt=contenu_mlt,lignes_mct=lignes_mct)
     

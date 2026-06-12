@@ -4,7 +4,7 @@ from data.modeles import Evenement
 from pathlib import Path
 from datetime import datetime
 from data.output_models import EventDetectorOutput
-
+from LLM.ollama_config import LLMMessage
 _PROMPTS = Path(__file__).parent / "../" "prompts"
 
 
@@ -21,11 +21,13 @@ class DetectionEvent:
         prompt = _charger("event_detector.txt").format(
             datetime_now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        llm_reponse = self.llm.send_simple(user_text=message_user, system_prompt=prompt, json_schema=EventDetectorOutput.model_json_schema())
-        print("llm reponse : "+str(llm_reponse))
+        llm_reponse = self.llm.send(
+            messages=[LLMMessage(role="user", contenu=message_user)], 
+            system_prompt=prompt,
+            json_schema=EventDetectorOutput.model_json_schema()
+        )
         #model structuré de la réponse du LLM
         contenu_brut = EventDetectorOutput.model_validate_json(llm_reponse)
-        print(contenu_brut)
         
         if contenu_brut.Timing_Evenement is None:
             return
@@ -41,9 +43,9 @@ class DetectionEvent:
         # timing_evenement = heure réelle de l'événement
         timing_evenement = contenu_brut.Timing_Evenement
         # importance : score fourni par le LLM, borné entre 0.0 et 1.0
-        importance_brute = contenu_brut.Importance or 0.5
+        importance = contenu_brut.Importance or 0.5
         try:
-            importance = max(0.0, min(1.0, float(importance_brute)))
+            importance = max(0.0, min(1.0, float(importance)))
         except (ValueError, TypeError):
             importance = 0.5
         self.evt_repo.create(Evenement(

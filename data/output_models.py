@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from enum import Enum
 from datetime import datetime
+from typing import Optional
 
 class TypeEvenement(str, Enum):
     RENDEZ_VOUS = "rendez-vous"
@@ -12,7 +13,7 @@ class TypeEvenement(str, Enum):
 class EventDetectorOutput(BaseModel):
     Type: TypeEvenement
     Evenement: str
-    Timing_Evenement: datetime
+    Timing_Evenement: Optional[datetime] 
     Importance: float 
     Confiance: float
     

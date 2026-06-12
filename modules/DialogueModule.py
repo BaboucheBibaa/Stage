@@ -1,7 +1,7 @@
 from datetime import datetime
 from data.modeles import Conversation, Message, MCT, MLT
 from LLM.LLMBase import Message as LLMMessage, BaseLLMClient
-from prompts.prompt_loader import build_system_prompt
+from prompts.SysPromptLoader import build_system_prompt
 from data.dataclasses import (
     DonneesProfil, DonneesPreferences, DonneesSujetSensible,
     DonneesCompagnon, DonneesConversation, DonneesMessage,
@@ -11,7 +11,6 @@ from data.dataclasses import (
 from data.output_models import GeneralOutput
 from .resume import resumer_echange, resumer_session
 from .EventDetection import DetectionEvent
-import json
 
 class DialogueModule:
     """Gère les dialogues entre l'utilisateur et le compagnon virtuel"""
@@ -44,7 +43,8 @@ class DialogueModule:
         self.sensibles = self.data_sujets.getSujets(id_profil)
         self.mlt = self.data_mlt.getRecente(id_profil)
         self.mct = self.data_mct.getToday(id_profil)
-        # Historique de la conversation
+        self._system_prompt = self._build_system_prompt()
+        # Historique de la conversation courante
         self._historique: list[LLMMessage] = []
         self._id_conversation = self._nouvelle_conversation()
         if not self._id_conversation:
@@ -52,11 +52,12 @@ class DialogueModule:
         
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
-        prompt_systeme = self._build_system_prompt()
+        prompt_systeme = self._system_prompt
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
         self._historique.append(LLMMessage(role="user", contenu=message_user))
         # Appeler le LLM
         response = self.llm.send(
+            #envoie de l'historique de conversation récent
             messages=self._historique, 
             system_prompt=prompt_systeme,
             #format d'output général à une discussion basique.
@@ -124,6 +125,8 @@ class DialogueModule:
             self.data_mct.nettoyage(id_profil)
             # Rafraîchir le cache de MLT
             self.mlt = self.data_mlt.getRecente(id_profil)
+            self._system_prompt = self._build_system_prompt()
+
             return True
         else:
             print("Erreur: Impossible de sauvegarder la MLT")

@@ -7,7 +7,7 @@ from pathlib import Path
 from LLM.LLMBase import BaseLLMClient
 from data.modeles import MCT
 from data.output_models import ResumeMCTOutput,ResumeMLTOutput
-
+from LLM.ollama_config import LLMMessage
 _PROMPTS = Path(__file__).parent / "../" "prompts"
 
 
@@ -19,11 +19,16 @@ def resumer_echange(llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> R
     """
     Résume un échange en une phrase courte pour la MCT.
     """
-    prompt = _charger("resume_mct.txt").format(
+    system_prompt = _charger("mct/mct_resume_system.txt")
+    user_prompt = _charger("mct/mct_resume_user.txt").format(
         msg_user=msg_user,
-        rep_assistant=rep_assistant,
+        rep_assistant=rep_assistant
     )
-    res = llm.send_simple(prompt, ResumeMCTOutput.model_json_schema())
+    res = llm.send(
+        messages=[LLMMessage(role="user", contenu=user_prompt)],
+        system_prompt=system_prompt,
+        json_schema=ResumeMCTOutput.model_json_schema()
+    )
     resume = ResumeMCTOutput.model_validate_json(res)
     return resume
 
@@ -35,14 +40,17 @@ def resumer_session(llm : BaseLLMClient, historique: list[MCT]) -> ResumeMLTOutp
     historique : liste de LLMMessage de la session courante
     mlt_existante : texte de la dernière MLT en base (peut être vide)
     """
-    lignes = []
-    for msg in historique:
-        lignes.append("Résumé de la conversation à " + str(msg.date_creation) + " :" + msg.message )
-    historique_texte = "\n".join(lignes)
-    prompt = _charger("resume_mlt.txt").format(
-        liste_messages=historique_texte,
+    lignes = [
+        f"Résumé de la conversation à {msg.date_creation} : {msg.message}"
+        for msg in historique
+    ]
+    system_prompt = _charger("mlt/mlt_resume_system.txt")
+    user_prompt = _charger("mlt/mlt_resume_user.txt").format(
+        liste_messages="\n".join(lignes)
     )
-    res = llm.send_simple(prompt, ResumeMLTOutput.model_json_schema())
-    print(res)
+    res = llm.send(
+        messages=[LLMMessage(role="user", contenu=user_prompt)],
+        system_prompt=system_prompt,
+        json_schema=ResumeMLTOutput.model_json_schema())
     resume = ResumeMLTOutput.model_validate_json(res)
     return resume
