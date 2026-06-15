@@ -11,7 +11,7 @@ class OllamaClient(BaseLLMClient):
         """Envoie un message au LLM
 
         Args:
-            messages (list[LLMMessage]): Contexte passé dans la discussion
+            messages (list[LLMMessage]): Contexte
             json_schema (object, optional): Modèle permettant de structurer la réponse générée par le LLM. Defaults to None.
             system_prompt (str, optional): Prompt système. Defaults to None.
 
@@ -36,6 +36,8 @@ class OllamaClient(BaseLLMClient):
             return LLMResponse(
                 contenu=contenu_brut,
                 modele=self.model,
+                tokens_entree=response["prompt_eval_count"],
+                tokens_sortie=response["eval_count"]
             )
         except Exception:
             return LLMResponse(contenu="", modele=self.model)

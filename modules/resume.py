@@ -26,7 +26,7 @@ def resumer_echange(llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> R
         system_prompt=system_prompt,
         json_schema=ResumeMCTOutput.model_json_schema()
     )
-    resume = ResumeMCTOutput.model_validate_json(res)
+    resume = ResumeMCTOutput.model_validate_json(res.contenu)
     return resume
 
 def resumer_session(llm : BaseLLMClient, historique: list[MCT]) -> ResumeMLTOutput:
@@ -49,5 +49,5 @@ def resumer_session(llm : BaseLLMClient, historique: list[MCT]) -> ResumeMLTOutp
         messages=[LLMMessage(role="user", contenu=user_prompt)],
         system_prompt=system_prompt,
         json_schema=ResumeMLTOutput.model_json_schema())
-    resume = ResumeMLTOutput.model_validate_json(res)
+    resume = ResumeMLTOutput.model_validate_json(res.contenu)
     return resume

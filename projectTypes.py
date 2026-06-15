@@ -137,10 +137,10 @@ class Evenement:
         id_profil (int): Identifiant du profil concerné par l'événement
         description (str): Description détaillée de l'événement
         timing (datetime): Moment/date de l'événement indiqué
+        timing_notification (str): "avant" ou "après" en fonction de si la notification doit être envoyée avant ou après le timing de l'événement.
         statut (str): État de l'événement ('Planifié', 'Déclenché')
         importance (float): Score d'importance entre 0.0 (négligeable) et 1.0 (critique).
-                           Détermine si le compagnon déclenche une notification et son ton.
-                           Calculé par le LLM à la détection, affiné par des règles temporelles.
+                           Calculé par le LLM à la détection.
                            Seuil de déclenchement par défaut : 0.3
     """
     id: int = None
@@ -148,6 +148,7 @@ class Evenement:
     type_evenement: str = None
     description: str = None
     timing: datetime = None
+    timing_notification : str = None # la notification de l'événement doit se faire avant ou après le timing de l'événement ?
     statut: bool = False
     importance: float = 0.5
 

@@ -1,55 +1,50 @@
 from datetime import datetime
-from projectTypes import LLMMessage, BaseLLMClient, Conversation, Message, MCT, MLT,GeneralOutput
-from prompts.SysPromptLoader import build_system_prompt
+from projectTypes import LLMMessage, BaseLLMClient, Conversation, Message, MCT, MLT,GeneralOutput,SujetSensible, Preference
 from data.dataclasses import (
     DonneesProfil, DonneesPreferences, DonneesSujetSensible,
     DonneesCompagnon, DonneesConversation, DonneesMessage,
     DonneesMLT, DonneesMCT,DonneesEvenement
 )
+from spacy import load
+from data.bd import Database
+import json
+from pathlib import Path
 from .resume import resumer_echange, resumer_session
 from .EventDetection import DetectionEvent
+
+_TEMPLATE = (Path(__file__).parent / "../prompts/system_prompt.txt").read_text(encoding="utf-8")
+
+nlp = load("fr_core_news_md")
 
 class DialogueModule:
     """Gère les dialogues entre l'utilisateur et le compagnon virtuel"""
     def __init__(self, llm: BaseLLMClient, id_profil: int):
         #dataclasses
-        self.data_profil = DonneesProfil()
-        self.data_prefs = DonneesPreferences()
-        self.data_sujets = DonneesSujetSensible()
-        self.data_compagnon = DonneesCompagnon()
-        self.data_conv = DonneesConversation()
-        self.data_msg = DonneesMessage()
-        self.data_mlt = DonneesMLT()
-        self.data_mct = DonneesMCT()
-        self.data_evenement = DonneesEvenement()
+        self._db = Database()
+        self.data_mlt = DonneesMLT(db=self._db)
+        self.data_mct = DonneesMCT(db=self._db)
+        self.id_profil = id_profil
+        self.profil = DonneesProfil(self._db).getProfil(self.id_profil)
         
         self.llm = llm
-        self.id_profil = id_profil
-        self.detection_event = DetectionEvent(self.llm, self.data_evenement, self.id_profil)
-        
-        # Charger les données du profil
-        self.profil = self.data_profil.getProfil(id_profil)
-        if not self.profil:
-            raise ValueError(f"Profil avec l'ID {id_profil} introuvable en base de données")
-        
-        self.compagnon = self.data_compagnon.getCompagnon(1)
+        # Charger les données du profil du compagnon
+        data_compagnon = DonneesCompagnon(db=self._db)
+        self.compagnon = data_compagnon.getCompagnon(1)
         if not self.compagnon:
             raise ValueError("Aucun compagnon virtuel trouvé en base de données")
         
-        self.prefs = self.data_prefs.getPreferences(id_profil)
-        self.sensibles = self.data_sujets.getSujets(id_profil)
-        self.mlt = self.data_mlt.getRecente(id_profil)
-        self.mct = self.data_mct.getToday(id_profil)
-        self._system_prompt = self._build_system_prompt()
         # Historique de la conversation courante
         self._historique: list[LLMMessage] = []
+        
         self._id_conversation = self._nouvelle_conversation()
         if not self._id_conversation:
             raise RuntimeError("Impossible de créer une nouvelle conversation")
         
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
-        prompt_systeme = self._system_prompt
+        #filtre de la mémoire court terme pertinente par rapport au message de l'utilisateur pour pas surcharger le compagnon avec de la mémoire inutile.
+        mct_pertinente = self.recup_MCT_pertinente(message_user=message_user)
+        prompt_systeme = self._build_system_prompt(mct_pertinente)
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
         self._historique.append(LLMMessage(role="user", contenu=message_user))
         # Appeler le LLM
@@ -65,38 +60,28 @@ class DialogueModule:
         # Ajouter la réponse à l'historique
         self._historique.append(LLMMessage(role="assistant", contenu=reponse_obj.Message))
         #détection d'événement dans un message
-        self.detection_event.detecter(message_user)
+        data_evenement = DonneesEvenement(self._db)
+        detection_event = DetectionEvent(self.llm, data_evenement, self.id_profil)
+        detection_event.detecter(message_user)
         
         self._sauvegarder_message(message_user, reponse_obj.Message)
         self._add_MCT(message_user, reponse_obj.Message)
         return reponse_obj.Message
-    
-    def _build_system_prompt(self) -> str:
-        """Construit le prompt système personnalisé"""
-        return build_system_prompt(
-            nom_compagnon=self.compagnon.modele,
-            prenom=self.profil.prenom,
-            nom=self.profil.nom,
-            age=self._calculer_age(self.profil.date_naissance),
-            profil=self.compagnon.profil,
-            preferences=self.prefs,
-            sujets_sensibles=self.sensibles,
-            mlt_text=self.mlt.text if self.mlt else "",
-            mct_list=self.mct,
-        )
     def _nouvelle_conversation(self) -> int:
         """Crée une nouvelle conversation"""
+        data_conv = DonneesConversation(db=self._db)
         conv = Conversation(
             sujet="Session du " + datetime.now().strftime("%d/%m/%Y %H:%M"),
             id_user=self.id_profil,
             id_companion=self.compagnon.id,
             date_creation=datetime.now(),
         )
-        return self.data_conv.create(conv)
+        return data_conv.create(conv)
     def _sauvegarder_message(self, msg_user: str, rep_assistant: str) -> None:
         """Sauvegarde le message et la réponse en BD"""
         try:
-            self.data_msg.create(Message(
+            data_msg = DonneesMessage(db=self._db)
+            data_msg.create(Message(
                 msg_user=msg_user,
                 reponse_assistant=rep_assistant,
                 id_conversation=self._id_conversation,
@@ -119,10 +104,7 @@ class DialogueModule:
         ))
         if mlt_id:
             # Si ça a bien été créé, alors on vide la MCT
-            self.data_mct.nettoyage(id_profil)
-            # Rafraîchir le cache de MLT
-            self.mlt = self.data_mlt.getRecente(id_profil)
-            self._system_prompt = self._build_system_prompt()
+            self.data_mct.vider(id_profil)
 
             return True
         else:
@@ -173,3 +155,91 @@ class DialogueModule:
         except Exception as e:
             print(f"Erreur lors du calcul de l'âge: {e}")
             return 0
+    def format_mct(self,mct: MCT) -> str:
+        try:
+            data : dict = json.loads(mct.message)
+            return f"  [{mct.date_creation:%H:%M}] {data.get('sujet','')} — {data.get('intention_utilisateur','')}"
+        except json.JSONDecodeError:
+            return f"  {mct.message}"
+    
+    def recup_MCT_pertinente(self, message_user : str, seuil : float = 0.6) -> list[MCT]:
+        """Récupère la Mémoire Court Terme (MCT) pertinente avec le message utilisateur.
+
+        Args:
+            message_user (str): Message de l'utilisateur
+            seuil (float, optional): Seuil de similarité entre deux messages stockés. Defaults to 0.7.
+
+        Returns:
+            list[MCT]: Liste de la MCT pertinente
+        """
+        mct_pertinente : list[MCT] = []
+        doc = nlp(message_user)
+        donnees_mct = self.data_mct.getToday(self.id_profil)
+        for donnee_mct in donnees_mct:
+            doc_mct = nlp(donnee_mct.message)
+            if doc.similarity(doc_mct) > seuil:
+                mct_pertinente.append(donnee_mct)
+        return mct_pertinente
+    def _build_system_prompt(self, mct_Pertinente : list[MCT]) -> str:
+        data_prefs = DonneesPreferences(db= self._db)
+        data_profil = DonneesProfil(db = self._db)
+        data_sujets = DonneesSujetSensible(db = self._db)
+        
+        mlt = self.data_mlt.getRecente(self.id_profil)
+        profil = data_profil.getProfil(self.id_profil)
+
+        prefs = data_prefs.getPreferences(self.id_profil)
+        sensibles = data_sujets.getSujets(self.id_profil)
+
+        if not profil:
+            raise ValueError(f"Profil avec l'ID {self.id_profil} introuvable en base de données")
+        
+
+        # Préférences
+        if prefs:
+            lignes_preferences = "\n".join(f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in prefs)
+        else:
+            lignes_preferences = "  Aucune préférence enregistrée pour l'instant."
+
+        # Sujets sensibles
+        if sensibles:
+            lignes = []
+            for s in sensibles:
+                if s.niveau >= 0.7:
+                    consigne = "éviter absolument"
+                elif s.niveau >= 0.4:
+                    consigne = "aborder avec beaucoup de délicatesse"
+                else:
+                    consigne = "aborder avec prudence"
+                lignes.append(f"  - {s.sujet} ({consigne})")
+            lignes_sujets_sensibles = "\n".join(lignes)
+        else:
+            lignes_sujets_sensibles = "  Aucun sujet sensible enregistré."
+
+        # MLT
+        if mlt:
+            contenu_mlt = mlt.text.strip() if mlt.text else "Aucune mémoire long terme disponible pour l'instant."
+        else:
+            contenu_mlt = " Aucune mémoire long terme sauvegardée."
+        # MCT
+        if mct_Pertinente:
+            lignes_mct = "\n".join(self.format_mct(mct) for mct in reversed(mct_Pertinente))
+        else:
+            lignes_mct = "  Aucun échange précédent."
+
+        return _TEMPLATE.format(
+            date_jour=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            nom_compagnon=self.compagnon.modele,
+            prenom=profil.prenom,
+            nom=profil.nom,
+            age=self._calculer_age(profil.date_naissance),
+            empathie=f"{self.compagnon.profil['empathie']:.0%}",
+            humour=f"{self.compagnon.profil['humour']:.0%}",
+            professionalisme=f"{self.compagnon.profil['professionalisme']:.0%}",
+            patience=f"{self.compagnon.profil['patience']:.0%}",
+            lignes_preferences=lignes_preferences,
+            lignes_sujets_sensibles=lignes_sujets_sensibles,
+            contenu_mlt=contenu_mlt,
+            lignes_mct=lignes_mct
+        )
+        

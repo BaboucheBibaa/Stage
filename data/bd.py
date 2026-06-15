@@ -29,17 +29,13 @@ class Database():
     def __del__(self):
         self.close()
     def execute(self, requete: str, valeurs: tuple = None) -> bool:
-        """Exécute une requête SQL qui ne doit pas retourner de résultat.
-
-        Args:
-            requete (str): Requête SQL à exécuter (mettre des ? pour bind les paramètres)
-            valeurs (tuple, optional): Valeurs à passer en paramètres. Defaults to None.
-        """
-        if self.__cursor.execute(requete, valeurs):
+        try:
+            self.__cursor.execute(requete, valeurs)
             self.__conn.commit()
             return True
-        return False
-        
+        except Exception as e:
+            self.__conn.rollback()
+            return False
     def executeFetch(self,requete: str, valeurs=None) -> list[tuple]:
         """Exécute une requête qui doit retourner un ou plusieurs résultats.
 

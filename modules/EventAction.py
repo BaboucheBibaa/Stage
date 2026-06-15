@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from pathlib import Path
-from enum import Enum
-
+from data.bd import Database
 from projectTypes import BaseLLMClient,Evenement, TypeEvenement
 from data.dataclasses import (
     DonneesEvenement,
@@ -18,10 +17,12 @@ from LLM.ollama_config import LLMMessage
 _REGLES: dict[str, list[timedelta]] = {
     TypeEvenement.RENDEZ_VOUS: [
         timedelta(hours=-1),        # 1 heure avant
+        timedelta(hours=1)         # 1 heure après ("comment ça s'est passé ?")
     ],
     TypeEvenement.EXAMEN: [
         timedelta(hours=-13),       # veille au soir
         timedelta(hours=-1),        # 1 heure avant le jour J
+        timedelta(hours=2),        # 1 heure après ("comment s'est passé l'exam ?")
     ],
     TypeEvenement.DEADLINE: [
         timedelta(hours=-24),       # 24 heures avant
@@ -47,18 +48,13 @@ def _charger_prompt(nom: str) -> str:
 
 class EventAction:
     def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 5,fenetre_minutes: int = 30):
+        self._db = Database()
         self.llm = llm
         self.id_profil = id_profil
         self.intervalle_minutes = intervalle_minutes
         self.fenetre_minutes = fenetre_minutes
 
-        self._data_evt      = DonneesEvenement()
-        self._data_profil   = DonneesProfil()
-        self._data_prefs    = DonneesPreferences()
-        self._data_sujets   = DonneesSujetSensible()
-        self._data_compagnon = DonneesCompagnon()
-        self._data_mct      = DonneesMCT()
-        self._data_mlt      = DonneesMLT()
+        self._data_evt      = DonneesEvenement(db=self._db)
 
     def verifier_et_declencher(self) -> list[str]:
         """
@@ -139,11 +135,18 @@ class EventAction:
         Returns:
             dict: Dictionnaire de variables à injecter dans le template de prompt.
         """
-        profil    = self._data_profil.getProfil(self.id_profil)
-        prefs     = self._data_prefs.getPreferences(self.id_profil)
-        mct_list  = self._data_mct.getToday(self.id_profil)
-        mlt       = self._data_mlt.getRecente(self.id_profil)
-        compagnon = self._data_compagnon.getCompagnon(1)
+        
+        data_mct = DonneesMCT(db=self._db)
+        data_mlt = DonneesMLT(db=self._db)
+        data_profil = DonneesProfil(db=self._db)
+        data_prefs = DonneesPreferences(db=self._db)
+        data_compagnon = DonneesCompagnon(db=self._db)
+
+        profil    = data_profil.getProfil(self.id_profil)
+        prefs     = data_prefs.getPreferences(self.id_profil)
+        mct_list  = data_mct.getToday(self.id_profil)
+        mlt       = data_mlt.getRecente(self.id_profil)
+        compagnon = data_compagnon.getCompagnon(1)
 
         # Formatage des préférences
         if prefs:
