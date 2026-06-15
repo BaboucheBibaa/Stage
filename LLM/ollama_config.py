@@ -1,7 +1,7 @@
 from projectTypes import LLMResponse, LLMMessage,BaseLLMClient
 import ollama  as _ollama
 class OllamaClient(BaseLLMClient):
-    def __init__(self,model: str = "mistral",base_url: str = "http://localhost:11434",temperature: float = 0.7,**kwargs):
+    def __init__(self,model: str = "qwen3:14b",base_url: str = "http://localhost:11434",temperature: float = 0.7,**kwargs):
         super().__init__(model=model,temperature=temperature, **kwargs)
         
         self.base_url = base_url

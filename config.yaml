@@ -1,5 +1,5 @@
 llm:
-  model: mistral
+  model: qwen3:14b
   temperature: 0.7
   max_tokens: 512 
  
