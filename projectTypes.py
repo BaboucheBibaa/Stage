@@ -257,14 +257,19 @@ class BaseLLMClient(ABC):
     Interface commune pour tous les fournisseurs LLM.
     Tout le reste du code n'utilise que cette interface.
     """
-
-    def __init__(self, model: str, temperature: float, max_tokens: int = 1024):
-        self.model = model
-        self.temperature = temperature
-        self.max_tokens = max_tokens
-
     @abstractmethod
-    def send(self,messages: list[LLMMessage],json_schema: object = None ,system_prompt: str = None) -> LLMResponse:
+    def send(
+        self,
+        messages: list[LLMMessage],
+        model: str = "qwen3:14b",
+        system_prompt: str | None = None,
+        json_schema: object | None = None,
+        options: dict | None = None,
+        keep_alive: str | float | None = None,
+        stream: bool = False,
+        think: bool = False,
+        tools: list | None = None
+        ) -> LLMResponse:
         """
         Envoie une liste de messages et retourne une réponse normalisée.
         C'est la seule méthode que le reste du projet appelle.

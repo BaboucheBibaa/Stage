@@ -1,43 +1,60 @@
 from projectTypes import LLMResponse, LLMMessage,BaseLLMClient
 import ollama  as _ollama
 class OllamaClient(BaseLLMClient):
-    def __init__(self,model: str = "mistral",base_url: str = "http://localhost:11434",temperature: float = 0.7,**kwargs):
-        super().__init__(model=model,temperature=temperature, **kwargs)
-        
-        self.base_url = base_url
-        self._ollama = _ollama
 
-    def send(self,messages: list[LLMMessage],json_schema : object = None, system_prompt: str = None) -> LLMResponse:
-        """Envoie un message au LLM
+    def __init__(self):
+        self._client = _ollama
 
-        Args:
-            messages (list[LLMMessage]): Contexte
-            json_schema (object, optional): Modèle permettant de structurer la réponse générée par le LLM. Defaults to None.
-            system_prompt (str, optional): Prompt système. Defaults to None.
+    def send(
+        self,
+        messages: list[LLMMessage],
+        model: str = "qwen3:14b",
+        system_prompt: str | None = None,
+        json_schema: object | None = None,
+        options: dict | None = None,
+        keep_alive: str | float | None = None,
+        stream: bool = False,
+        think: bool = False,
+        tools: list | None = None
+    ) -> LLMResponse:
 
-        Returns:
-            LLMResponse: _description_
-        """
         api_messages = []
-        args={}
+
         if system_prompt:
-            api_messages.append({"role": "system", "content": system_prompt})
+            api_messages.append({
+                "role": "system",
+                "content": system_prompt
+            })
+
+        api_messages.extend({"role": m.role,"content": m.contenu} for m in messages)
+
+        parametres = {
+            "model": model,
+            "messages": api_messages,
+            "stream": stream
+        }
+
+        if options:
+            parametres["options"] = options
+
+        if keep_alive is not None:
+            parametres["keep_alive"] = keep_alive
+
         if json_schema is not None:
-            args['format'] = json_schema
-        api_messages += [{"role": m.role, "content": m.contenu} for m in messages]
-        response = self._ollama.chat(
-            model=self.model,
-            messages=api_messages,
-            options={"temperature": self.temperature, "num_predict": self.max_tokens},
-            **args
+            parametres["format"] = json_schema
+
+        if think:
+            parametres["think"] = think
+
+        if tools:
+            parametres["tools"] = tools
+
+        response = self._client.chat(**parametres)
+
+        return LLMResponse(
+            contenu=response["message"]["content"],
+            thinking=response["message"].get("thinking"),
+            modele=model,
+            tokens_entree=response.get("prompt_eval_count", 0),
+            tokens_sortie=response.get("eval_count", 0)
         )
-        try:
-            contenu_brut = response["message"]["content"]
-            return LLMResponse(
-                contenu=contenu_brut,
-                modele=self.model,
-                tokens_entree=response["prompt_eval_count"],
-                tokens_sortie=response["eval_count"]
-            )
-        except Exception:
-            return LLMResponse(contenu="", modele=self.model)
