@@ -381,7 +381,7 @@ class DonneesEvenement:
         """
         self._db.execute(
             """INSERT INTO Evenement (Timing, Statut, Contexte, ID_Profil, Type_Evenement, Importance, Timing_Notification)
-                VALUES (?, ?, ?, ?, ?, ?)""",
+                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (evt.timing, evt.statut, evt.description, evt.id_profil, evt.type_evenement, evt.importance, evt.timing_notification),
         )
         result = self._db.executeFetch(

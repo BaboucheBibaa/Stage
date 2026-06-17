@@ -1,5 +1,5 @@
 llm:
-  model: qwen3:14b
+  model: gemma4:31b-cloud
   temperature: 0.7
   max_tokens: 512 
  

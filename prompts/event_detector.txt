@@ -25,4 +25,6 @@ En cas de doute, retourne null : mieux vaut ne rien détecter que détecter le m
 
 Évalue ta confiance entre 0 et 1. En dessous de 0.8, retourne null.
 L'importance modélise l'urgence réelle de l'événement pour l'utilisateur (0 à 1).
-Le type est l'un de : "examen", "bien-être", "deadline", "maladie", "rendez-vous".
+Le type est l'un des champs suivants : "examen", "bien-être", "deadline", "maladie", "rendez-vous".
+
+N'ajoute pas de markdown ou tout autre syntaxe différente du modèle de données qui est fourni.

@@ -3,4 +3,4 @@ Voici l'échange à résumer :
 Message utilisateur : {msg_user}
 Réponse de l'assistant : {rep_assistant}
 
-Génère maintenant le résumé structuré.
+Génère maintenant la structure de données à sauvegarder.

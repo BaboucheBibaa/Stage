@@ -1,5 +1,5 @@
 from datetime import datetime
-from projectTypes import LLMMessage, BaseLLMClient, Conversation, Message, MCT, MLT,GeneralOutput,SujetSensible, Preference
+from projectTypes import LLMMessage, BaseLLMClient, Conversation, Message, MCT, MLT,ResumeMCTOutput,ResumeMLTOutput
 from data.dataclasses import (
     DonneesProfil, DonneesPreferences, DonneesSujetSensible,
     DonneesCompagnon, DonneesConversation, DonneesMessage,
@@ -9,10 +9,15 @@ from spacy import load
 from data.bd import Database
 import json
 from pathlib import Path
-from .resume import resumer_echange, resumer_session
 from .EventDetection import DetectionEvent
 
 _TEMPLATE = (Path(__file__).parent / "../prompts/system_prompt.txt").read_text(encoding="utf-8")
+
+
+_PROMPTS = Path(__file__).parent / "../" "prompts"
+
+def _charger(nom: str) -> str:
+    return (_PROMPTS / nom).read_text(encoding="utf-8")
 
 nlp = load("fr_core_news_md")
 
@@ -52,21 +57,18 @@ class DialogueModule:
             #envoie de l'historique de conversation récent
             messages=self._historique, 
             system_prompt=prompt_systeme,
-            #format d'output général à une discussion basique.
-            json_schema=GeneralOutput.model_json_schema()
         )
-        reponse_obj = GeneralOutput.model_validate_json(response.contenu)
         
         # Ajouter la réponse à l'historique
-        self._historique.append(LLMMessage(role="assistant", contenu=reponse_obj.Message))
+        self._historique.append(LLMMessage(role="assistant", contenu=response))
         #détection d'événement dans un message
         data_evenement = DonneesEvenement(self._db)
         detection_event = DetectionEvent(self.llm, data_evenement, self.id_profil)
         detection_event.detecter(message_user)
         
-        self._sauvegarder_message(message_user, reponse_obj.Message)
-        self._add_MCT(message_user, reponse_obj.Message)
-        return reponse_obj.Message
+        self._sauvegarder_message(message_user, response)
+        self._add_MCT(message_user, response)
+        return response
     def _nouvelle_conversation(self) -> int:
         """Crée une nouvelle conversation"""
         data_conv = DonneesConversation(db=self._db)
@@ -96,7 +98,7 @@ class DialogueModule:
         if not historique:
             return False
         # Création de l'enregistrement de la mémoire long terme avec les données
-        mlt_resume = resumer_session(self.llm, historique)
+        mlt_resume = self.resumer_session(self.llm, historique)
         mlt_id = self.data_mlt.create(MLT(
             id_profil=self.id_profil,
             date_creation=datetime.now(),  # Datetime objet, pas string
@@ -112,27 +114,23 @@ class DialogueModule:
             return False
     def _add_MCT(self, msg_user: str, rep_assistant: str) -> bool:
         """Ajoute une donnée dans la mémoire court terme (MCT)"""
-        try:
-            resume_obj = resumer_echange(self.llm, msg_user, rep_assistant)
-            
-            # Convertir l'objet Pydantic en JSON pour le stocker
-            message = resume_obj.model_dump_json()
-            
-            mct_id = self.data_mct.create(MCT(
-                message=message,
-                id_profil=self.id_profil,
-                date_creation=datetime.now(),
-            ))
-            
-            if mct_id:
-                return True
-            else:
-                print("Erreur: Impossible de créer la MCT")
-                return False
-                
-        except Exception as e:
-            print(f"Erreur lors de l'ajout en MCT: {e}")
+        resume_obj = self.resumer_echange(self.llm, msg_user, rep_assistant)
+        
+        # Convertir l'objet Pydantic en JSON pour le stocker
+        message = resume_obj.model_dump_json()
+        
+        mct_id = self.data_mct.create(MCT(
+            message=message,
+            id_profil=self.id_profil,
+            date_creation=datetime.now(),
+        ))
+        
+        if mct_id:
+            return True
+        else:
+            print("Erreur: Impossible de créer la MCT")
             return False
+            
     @staticmethod
     def _calculer_age(date_naissance : datetime) -> int:
         """Calcule l'âge à partir de la date de naissance
@@ -162,24 +160,63 @@ class DialogueModule:
         except json.JSONDecodeError:
             return f"  {mct.message}"
     
-    def recup_MCT_pertinente(self, message_user : str, seuil : float = 0.6) -> list[MCT]:
-        """Récupère la Mémoire Court Terme (MCT) pertinente avec le message utilisateur.
-
-        Args:
-            message_user (str): Message de l'utilisateur
-            seuil (float, optional): Seuil de similarité entre deux messages stockés. Defaults to 0.7.
-
-        Returns:
-            list[MCT]: Liste de la MCT pertinente
-        """
-        mct_pertinente : list[MCT] = []
+    def recup_MCT_pertinente(self, message_user: str, seuil: float = 0.6) -> list[MCT]:
+        mct_pertinente: list[MCT] = []
         doc = nlp(message_user)
         donnees_mct = self.data_mct.getToday(self.id_profil)
         for donnee_mct in donnees_mct:
-            doc_mct = nlp(donnee_mct.message)
-            if doc.similarity(doc_mct) > seuil:
-                mct_pertinente.append(donnee_mct)
+            # Extraire le texte depuis le JSON MCT
+            try:
+                data : dict[str,str] = json.loads(donnee_mct.message)
+                texte_compare = f"{data.get('sujet', '')} {data.get('intention_utilisateur', '')} {' '.join(data.get('tags', []))}"
+            except (json.JSONDecodeError, AttributeError):
+                texte_compare = donnee_mct.message
+            
+            doc_mct = nlp(texte_compare)
+            if doc.vector_norm != 0 or doc_mct.vector_norm != 0:
+                if doc.similarity(doc_mct) > seuil:
+                    mct_pertinente.append(donnee_mct)
         return mct_pertinente
+    
+    
+    def resumer_echange(self,llm : BaseLLMClient, msg_user: str, rep_assistant: str) -> ResumeMCTOutput:
+        """
+        Résume un échange en une phrase courte pour la MCT.
+        """
+        system_prompt = _charger("mct/mct_resume_system.txt")
+        user_prompt = _charger("mct/mct_resume_user.txt").format(
+            msg_user=msg_user,
+            rep_assistant=rep_assistant
+        )
+        res = llm.send(
+            messages=[LLMMessage(role="user", contenu=user_prompt)],
+            system_prompt=system_prompt,
+            output_model=ResumeMCTOutput
+        )
+        return res
+    
+    def resumer_session(self,llm : BaseLLMClient, historique: list[MCT]) -> ResumeMLTOutput:
+        """
+        Résume toute la session pour mettre à jour la MLT.
+        Appelé en fin de conversation (quand l'utilisateur quitte).
+
+        historique : liste de LLMMessage de la session courante
+        mlt_existante : texte de la dernière MLT en base (peut être vide)
+        """
+        lignes = [
+            f"Résumé de la conversation à {msg.date_creation} : {msg.message}"
+            for msg in historique
+        ]
+        system_prompt = _charger("mlt/mlt_resume_system.txt")
+        user_prompt = _charger("mlt/mlt_resume_user.txt").format(
+            liste_messages="\n".join(lignes)
+        )
+        res = llm.send(
+            messages=[LLMMessage(role="user", contenu=user_prompt)],
+            system_prompt=system_prompt,
+            output_model=ResumeMLTOutput
+        )
+        return res
     def _build_system_prompt(self, mct_Pertinente : list[MCT]) -> str:
         data_prefs = DonneesPreferences(db= self._db)
         data_profil = DonneesProfil(db = self._db)

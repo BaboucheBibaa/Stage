@@ -45,45 +45,44 @@ class DetectionEvent:
         prompt = _charger("event_detector.txt").format(
             datetime_now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        llm_reponse = self.llm.send(
+        llm_reponse : EventDetectorOutput = self.llm.send(
             messages=[LLMMessage(role="user", contenu=message_user)], 
             system_prompt=prompt,
-            json_schema=EventDetectorOutput.model_json_schema()
+            output_model=EventDetectorOutput
         )
         #model structuré de la réponse du LLM
-        contenu_brut = EventDetectorOutput.model_validate_json(llm_reponse.contenu)
-        
-        if contenu_brut.Timing_Evenement is None:
+        if llm_reponse.importance is None:
             return
         
-        confiance = float(contenu_brut.Confiance or 0.0)
+        confiance = float(llm_reponse.confidence or 0.0)
         if confiance < 0.6:
             return
         
-        importance = max(0.0, min(1.0, float(contenu_brut.Importance or 0.5)))
+        importance = max(0.0, min(1.0, float(llm_reponse.importance or 0.5)))
         if importance < 0.3:
             return
 
         # timing_evenement = heure réelle de l'événement
-        timing_evenement = contenu_brut.Timing_Evenement
+        timing_evenement = llm_reponse.date
         # importance : score fourni par le LLM, borné entre 0.0 et 1.0
-        importance = contenu_brut.Importance or 0.5
+        importance = llm_reponse.importance or 0.5
         try:
             importance = max(0.0, min(1.0, float(importance)))
         except (ValueError, TypeError):
             importance = 0.5
-        for timing in _REGLES.get(contenu_brut.Type.value, _DEFAUT):
+        for timing in _REGLES.get(llm_reponse.type.value, _DEFAUT):
             notification = ""
             if timing.total_seconds() < 0:
                 notification = "avant"
             else:
                 notification = "après"
-            self.evt_repo.create(Evenement(
+            evenement_detecte = Evenement(
                 id_profil=self.id_profil,
-                description=contenu_brut.Evenement,
+                description=llm_reponse.event,
                 timing=timing_evenement,
                 statut='Planifié',
                 timing_notification = notification,
-                type_evenement=contenu_brut.Type.value,
+                type_evenement=llm_reponse.type.value,
                 importance=importance,
-            ))
+            )
+            self.evt_repo.create(evenement_detecte)

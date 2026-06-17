@@ -6,7 +6,6 @@ from data.dataclasses import (
     DonneesEvenement,
     DonneesProfil,
     DonneesPreferences,
-    DonneesSujetSensible,
     DonneesCompagnon,
     DonneesMCT,
     DonneesMLT,
@@ -54,7 +53,7 @@ class EventAction:
         self.intervalle_minutes = intervalle_minutes
         self.fenetre_minutes = fenetre_minutes
 
-        self._data_evt      = DonneesEvenement(db=self._db)
+        self._data_evt = DonneesEvenement(db=self._db)
 
     def verifier_et_declencher(self) -> list[str]:
         """
@@ -68,10 +67,9 @@ class EventAction:
         maintenant  = datetime.now()
         borne_basse = maintenant - timedelta(minutes=1)
         limite      = maintenant + timedelta(minutes=self.fenetre_minutes)
-        
+
         evenements = self._data_evt.getFuturs(self.id_profil)
         messages: list[str] = []
-
         for evt in evenements:
             timings = self.calculer_timings_notification(evt.timing, evt.type_evenement)
             for timing in timings:
@@ -96,7 +94,8 @@ class EventAction:
         user_prompt = _charger_prompt("proactive/proactive_user.txt").format(**contexte)
         message_proactif = self.llm.send(
             messages= [LLMMessage(role="user", contenu=user_prompt)],
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
+            
         )
         self._data_evt.updateEvent(evt.id, "Déclenché")
         return message_proactif

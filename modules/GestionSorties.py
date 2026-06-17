@@ -11,19 +11,19 @@ class MessageAffichage:
 
 class GestionSorties:
     """
-    File d'attente thread-safe centralisée pour l'affichage.
+    File d'attente pour l'affichage.
 
     Tous les modules y déposent leurs messages via enqueue().
-    Un seul consommateur (boucle_affichage dans main.py) les lit via get().
+    uniquement boucle_affichage dans main.py les lit via un get()
 
-    L'arrêt propre se fait en appelant stop(), qui enfile un None
+    L'arrêt se fait en appelant stop(), qui enfile un None
     que la boucle d'affichage interprète comme un signal de fin.
     """
 
     def __init__(self) -> None:
         self._queue: queue.Queue[MessageAffichage | None] = queue.Queue()
 
-    def enqueue(self,texte: str,source: Literal["dialogue", "proactif"] = "dialogue",) -> None:
+    def enqueue(self,texte: str,source: Literal["dialogue", "proactif"] = "dialogue") -> None:
         """
         Dépose un message dans la file.
 

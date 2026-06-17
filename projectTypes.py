@@ -12,11 +12,10 @@ class LLMMessage:
     contenu: str
 
 class LLMResponse(BaseModel):
-    """Format de sortie d'un LLM."""
     contenu: str
     modele: str
-    tokens_entree: int = 0
-    tokens_sortie: int = 0
+    tokens_entree: int
+    tokens_sortie: int
 
 # --------------------------------- modèles des types reçus par le LLM -----------------------------------------
 
@@ -29,38 +28,30 @@ class TypeEvenement(str, Enum):
     EXAMEN = "examen"
 
 class EventDetectorOutput(BaseModel):
-    Type: TypeEvenement
-    Evenement: str
-    Timing_Evenement: Optional[datetime] 
-    Importance: float 
-    Confiance: float
+    type: Optional[TypeEvenement]
+    event: Optional[str]
+    date: Optional[datetime]
+    importance: Optional[float] 
+    confidence: Optional[float]
     
 class ResumeMCTOutput(BaseModel):
-    Sujet : str 
-    Intention : str 
-    Evenements_Mentionnes : list[str] 
-    Resume_Reponse : list[str] 
-    Entites_Mentionnees : list[str] 
-    Langue : str 
-    Tags : list[str] 
+    Sujet: str
+    intention: str
+    Evenements_Mentionnes: list[str]
+    Resume_Reponse: list[str]
+    mentioned_entities: list[str]
+    language: str
+    tags: list[str]
 
 class ResumeMLTOutput(BaseModel):
-    Date : datetime 
-    Nombre_Echanges : int 
-    Humeur_Generale : str 
-    Themes_Du_Jour : list[str] 
-    Taches_Et_Demandes : list[dict[str,str]] 
-    Sujet_D_Interet : list[str] 
-    Evenements_Mentionnes : list[str] 
-    Points_attention : list[str] 
-    Resume_Journee : str 
-
-
-class GeneralOutput(BaseModel):
-    Message: str 
-
-
-
+    date: datetime
+    nombre_echanges: int
+    humeur_generale: str
+    themes_abordes: list[str]
+    centres_interets: list[str]
+    evenements_mentionnes: list[str]
+    points_attention: list[str]
+    resume_conversation: str 
 
 # -------------------------- modèles des types en BD ----------------------------------------------
 @dataclass
@@ -260,16 +251,13 @@ class BaseLLMClient(ABC):
     @abstractmethod
     def send(
         self,
+        model: str,
         messages: list[LLMMessage],
-        model: str = "qwen3:14b",
         system_prompt: str | None = None,
-        json_schema: object | None = None,
+        output_model: BaseModel | None = None,
         options: dict | None = None,
-        keep_alive: str | float | None = None,
-        stream: bool = False,
-        think: bool = False,
-        tools: list | None = None
-        ) -> LLMResponse:
+        keep_alive: float | None = None
+    ) -> BaseModel | str:
         """
         Envoie une liste de messages et retourne une réponse normalisée.
         C'est la seule méthode que le reste du projet appelle.

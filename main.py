@@ -3,7 +3,7 @@ import yaml
 
 from LLM.ollama_config import OllamaClient
 from modules.DialogueModule import DialogueModule
-from modules.BoucleProactivite import ProactiveScheduler
+from modules.BoucleProactivite import DeclenchementProactivite
 from modules.GestionSorties import GestionSorties, MessageAffichage
 
 ID_PROFIL  = 1
@@ -39,7 +39,7 @@ def boucle_chat(dm: DialogueModule, router: GestionSorties) -> None:
     """
     Boucle principale de conversation.
     Lit l'entrée utilisateur, appelle DialogueModule.chat(),
-    et dépose la réponse dans la queue — sans jamais faire print().
+    et dépose la réponse dans la queue
     """
     print(SEPARATEUR)
     print(f" Compagnon prêt | modèle : {dm.compagnon.modele}")
@@ -70,7 +70,7 @@ def main() -> None:
     with open("config.yaml") as f:
         config = yaml.safe_load(f)
 
-    llm    = OllamaClient(model=config["llm"]["model"])
+    llm    = OllamaClient()
     router = GestionSorties()
 
     # démarrage du thread d'affichage
@@ -83,7 +83,7 @@ def main() -> None:
     affichage_thread.start()
 
     # 2eme thread : le gestionnaire de proactivité, qui reçoit le gestionnaire de sorties pour qu'il puisse ajouter à la file les sorties proactives.
-    schedule = ProactiveScheduler(llm, ID_PROFIL, gestionnaire_sortie=router)
+    schedule = DeclenchementProactivite(llm, ID_PROFIL, gestionnaire_sortie=router)
     schedule.start()
 
     #module de dialogue simple

@@ -1,5 +1,8 @@
-from projectTypes import LLMResponse, LLMMessage,BaseLLMClient
+from projectTypes import LLMMessage,BaseLLMClient
+from pydantic import BaseModel
 import ollama  as _ollama
+import json
+
 class OllamaClient(BaseLLMClient):
 
     def __init__(self):
@@ -8,53 +11,37 @@ class OllamaClient(BaseLLMClient):
     def send(
         self,
         messages: list[LLMMessage],
-        model: str = "qwen3:14b",
+        model: str = "gemma4:31b-cloud",
         system_prompt: str | None = None,
-        json_schema: object | None = None,
+        output_model: BaseModel | None = None,
         options: dict | None = None,
-        keep_alive: str | float | None = None,
-        stream: bool = False,
-        think: bool = False,
-        tools: list | None = None
-    ) -> LLMResponse:
+        keep_alive: float | None = None
+    ) -> BaseModel | str:
 
-        api_messages = []
+        msgs = []
 
         if system_prompt:
-            api_messages.append({
-                "role": "system",
-                "content": system_prompt
-            })
+            msgs.append({"role": "system","content": system_prompt})
 
-        api_messages.extend({"role": m.role,"content": m.contenu} for m in messages)
+        msgs.extend({"role": m.role,"content": m.contenu} for m in messages)
 
-        parametres = {
+        args = {
             "model": model,
-            "messages": api_messages,
-            "stream": stream
+            "messages": msgs,
+            "options": options,
+            "keep_alive": keep_alive,
         }
 
-        if options:
-            parametres["options"] = options
+        if output_model:
+            args["format"] = output_model.model_json_schema()
 
-        if keep_alive is not None:
-            parametres["keep_alive"] = keep_alive
+        response = self._client.chat(**args)
 
-        if json_schema is not None:
-            parametres["format"] = json_schema
+        contenu = response["message"]["content"]
 
-        if think:
-            parametres["think"] = think
+        if output_model:
+            result = json.loads(contenu)
+            validated = output_model.model_validate(result)
+            return validated
 
-        if tools:
-            parametres["tools"] = tools
-
-        response = self._client.chat(**parametres)
-
-        return LLMResponse(
-            contenu=response["message"]["content"],
-            thinking=response["message"].get("thinking"),
-            modele=model,
-            tokens_entree=response.get("prompt_eval_count", 0),
-            tokens_sortie=response.get("eval_count", 0)
-        )
+        return contenu

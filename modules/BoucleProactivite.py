@@ -5,7 +5,7 @@ import threading
 from projectTypes import BaseLLMClient
 from .EventAction import EventAction
 from .GestionSorties import GestionSorties
-class ProactiveScheduler:
+class DeclenchementProactivite:
     """
     Thread de fond qui se déclenche toutes les intervalle_minutes.
 
