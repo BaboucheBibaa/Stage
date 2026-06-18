@@ -27,8 +27,10 @@ Utilise la mémoire long terme pour déterminer une habitude. Si elle n'a pas é
 #### Proactivité basée sur l'anomalie ?
 Une chose qui sort de l'ordinaire, un manque de discussion dans une journée ? ça semble se rapproche de la proactivité basée sur l'habitude.
 
-## Bugs sur la proactivité
-Proactivité événementielle : Le modèle me harcèle jusqu'à la date du rendez-vous. J'ai dit que j'avais un rendez-vous à 17h, il me harcèle toutes les 5 minutes pour me le rappeler.
+### Prise d'initiative du LLM
+On crée une table "Initiatives" et dedans on va ajouter chaque initiative que le LLM va prendre.
+Et le principe sera le suivant : on analyse la MLT afin de déterminer si on peut prendre des nouvelles au sujet d'une préoccupation importante. En faisant une analyse sémantique entre l'élément que le LLM peut prendre dans la MLT et tous les éléments présents dans la table Initiatives sur les X derniers jours, si jamais il n'y a pas de similarité entre l'élément choisi dans la MLT et tous les éléments, alors on peut envoyer un message pour prendre l'initiative.
+Initiatives doit pouvoir prendre un attribut "terminé" ou non ? c'est bien que le LLM demande des nouvelles sur quelque chose, mais s'il demande tous les 3 mois "comment avance ton projet ?", l'utilisateur en aura marre.
 
 # Bonus
 
