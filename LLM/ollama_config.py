@@ -1,10 +1,12 @@
-from projectTypes import LLMMessage,BaseLLMClient
-from pydantic import BaseModel
-import ollama  as _ollama
 import json
 
-class OllamaClient(BaseLLMClient):
+import ollama as _ollama
+from pydantic import BaseModel
 
+from projectTypes import BaseLLMClient, LLMMessage
+
+
+class OllamaClient(BaseLLMClient):
     def __init__(self):
         self._client = _ollama
 
@@ -15,15 +17,15 @@ class OllamaClient(BaseLLMClient):
         system_prompt: str | None = None,
         output_model: BaseModel | None = None,
         options: dict | None = None,
-        keep_alive: float | None = None
+        keep_alive: float | None = None,
     ) -> BaseModel | str:
 
         msgs = []
 
         if system_prompt:
-            msgs.append({"role": "system","content": system_prompt})
+            msgs.append({"role": "system", "content": system_prompt})
 
-        msgs.extend({"role": m.role,"content": m.contenu} for m in messages)
+        msgs.extend({"role": m.role, "content": m.contenu} for m in messages)
 
         args = {
             "model": model,
@@ -37,11 +39,11 @@ class OllamaClient(BaseLLMClient):
 
         response = self._client.chat(**args)
 
-        contenu = response["message"]["content"]
+        contenu: str = response["message"]["content"]
 
         if output_model:
             result = json.loads(contenu)
-            validated = output_model.model_validate(result)
+            validated: BaseModel = output_model.model_validate(result)
             return validated
 
         return contenu

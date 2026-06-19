@@ -1,52 +1,68 @@
 from datetime import datetime, timedelta
 from pathlib import Path
+
 from data.bd import Database
-from projectTypes import BaseLLMClient,Evenement, TypeEvenement, MCT,MLT, EventDetectorOutput
 from data.dataclasses import (
-    DonneesEvenement,
-    DonneesProfil,
-    DonneesPreferences,
     DonneesCompagnon,
+    DonneesEvenement,
     DonneesMCT,
     DonneesMLT,
+    DonneesPreferences,
+    DonneesProfil,
 )
 from LLM.ollama_config import LLMMessage
+from projectTypes import (
+    MCT,
+    MLT,
+    BaseLLMClient,
+    Evenement,
+    EventDetectorOutput,
+    TypeEvenement,
+)
 
 # Chaque type peut produire PLUSIEURS notifications (liste de timedelta).
 _REGLES: dict[str, list[timedelta]] = {
     TypeEvenement.RENDEZ_VOUS: [
-        timedelta(hours=-1),        # 1 heure avant
-        timedelta(hours=1)         # 1 heure après ("comment ça s'est passé ?")
+        timedelta(hours=-1),  # 1 heure avant
+        timedelta(minutes=3),  # 1 heure après ("comment ça s'est passé ?")
     ],
     TypeEvenement.EXAMEN: [
-        timedelta(hours=-13),       # veille au soir
-        timedelta(hours=-1),        # 1 heure avant le jour J
-        timedelta(hours=2),        # 1 heure après ("comment s'est passé l'exam ?")
+        timedelta(hours=-13),  # veille au soir
+        timedelta(hours=-1),  # 1 heure avant le jour J
+        timedelta(hours=2),  # 1 heure après ("comment s'est passé l'exam ?")
     ],
     TypeEvenement.DEADLINE: [
-        timedelta(hours=-24),       # 24 heures avant
-        timedelta(hours=-2),        # 2 heures avant
+        timedelta(hours=-24),  # 24 heures avant
+        timedelta(hours=-2),  # 2 heures avant
     ],
     TypeEvenement.MALADIE: [
-        timedelta(hours=2),         # 2h après la mention
+        timedelta(hours=2),  # 2h après la mention
     ],
     TypeEvenement.BIEN_ETRE: [
-        timedelta(hours=1),         # 1h après la mention
+        timedelta(hours=1),  # 1h après la mention
     ],
 }
 
 # Délai par défaut si le type est inconnu
 _DEFAUT = [timedelta(hours=-1)]
 
-_PROMPTS = Path(__file__).parent / "../" "prompts"
+_PROMPTS = Path(__file__).parent / "../prompts"
 
 
 def _charger_prompt(nom: str) -> str:
     """Charge un fichier texte depuis le dossier prompts/."""
     return (_PROMPTS / nom).read_text(encoding="utf-8")
 
+
 class EventModule:
-    def __init__(self,llm: BaseLLMClient,id_profil: int, evt_repo: DonneesEvenement, intervalle_minutes: int = 5,fenetre_minutes: int = 30):
+    def __init__(
+        self,
+        llm: BaseLLMClient,
+        id_profil: int,
+        evt_repo: DonneesEvenement,
+        intervalle_minutes: int = 5,
+        fenetre_minutes: int = 30,
+    ):
         self._db = Database()
         self.llm = llm
         self.id_profil = id_profil
@@ -55,25 +71,23 @@ class EventModule:
         self.evt_repo = evt_repo
         self._data_evt = DonneesEvenement(db=self._db)
 
-
-
     def detecter(self, message_user: str) -> None:
         prompt = _charger_prompt("event_detector.txt").format(
             datetime_now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        llm_reponse : EventDetectorOutput = self.llm.send(
-            messages=[LLMMessage(role="user", contenu=message_user)], 
+        llm_reponse: EventDetectorOutput = self.llm.send(
+            messages=[LLMMessage(role="user", contenu=message_user)],
             system_prompt=prompt,
-            output_model=EventDetectorOutput
+            output_model=EventDetectorOutput,
         )
-        #model structuré de la réponse du LLM
+        # model structuré de la réponse du LLM
         if llm_reponse.importance is None:
             return
-        
+
         confiance = float(llm_reponse.confidence or 0.0)
         if confiance < 0.6:
             return
-        
+
         importance = max(0.0, min(1.0, float(llm_reponse.importance or 0.5)))
         if importance < 0.3:
             return
@@ -96,8 +110,8 @@ class EventModule:
                 id_profil=self.id_profil,
                 description=llm_reponse.event,
                 timing=timing_evenement,
-                statut='Planifié',
-                timing_notification = notification,
+                statut="Planifié",
+                timing_notification=notification,
                 type_evenement=llm_reponse.type.value,
                 importance=importance,
             )
@@ -109,35 +123,33 @@ class EventModule:
         se trouve dans la fenêtre de surveillance.
         """
 
-        maintenant = datetime.now()
-        borne_basse = maintenant - timedelta(minutes=1)
-        limite = maintenant + timedelta(minutes=self.fenetre_minutes)
-
         evenements = self._data_evt.getFuturs(self.id_profil)
-
         messages = []
-
         for evt in evenements:
-
             regles = _REGLES.get(evt.type_evenement, _DEFAUT)
 
             for delta in regles:
-
                 # On ne garde que les notifications correspondant
                 # au type demandé
+                maintenant = datetime.now()
                 if evt.timing_notification == "avant":
+                    # si notre durée est positive mais que le timing de notification dit "avant", on ignore cette itération de la boucle.
+
                     if delta >= timedelta(0):
                         continue
+                    # dans le cas où la notification doit être envoyée avant le timing, la borne basse correspond au timing de notification (timing + le delta déterminé) et la limite correspond au timing lui-même. On fait un intervalle, pas un timing précis de notification.
+                    debut = evt.timing + delta
+                    fin = evt.timing
 
-                elif evt.timing_notification == "après":
+                else:
+                    # même logique ici
                     if delta <= timedelta(0):
                         continue
-
-                timing_notification = evt.timing + delta
-
+                    # dans le cas où la notification doit être envoyée après le timing, la borne basse doit être le timing lui-même, + une marge de 3 minutes, et la limite pour envoyer la notification correspond au timing de la notification (timing de l'évènement + le delta)
+                    debut = evt.timing
+                    fin = evt.timing + delta
                 # La notification doit être envoyée maintenant
-                if borne_basse <= timing_notification <= limite:
-
+                if debut <= maintenant <= fin:
                     message = self.__declencher(evt)
 
                     messages.append(message)
@@ -155,17 +167,27 @@ class EventModule:
         Returns:
             str: Le message proactif généré par le LLM.
         """
+        promptPath = ""
+        if evt.timing_notification == "avant":
+            promptPath = "proactive/event_user_avant.txt"
+        else:
+            promptPath = "proactive/event_user_après.txt"
+
         contexte = self._construire_contexte(evt)
-        system_prompt   = _charger_prompt("proactive/proactive_system.txt").format(**contexte)
-        user_prompt = _charger_prompt("proactive/proactive_user.txt").format(**contexte)
+        system_prompt = _charger_prompt("proactive/event_system.txt").format(**contexte)
+        user_prompt = _charger_prompt(promptPath).format(**contexte)
         message_proactif = self.llm.send(
-            messages= [LLMMessage(role="user", contenu=user_prompt)],
+            messages=[LLMMessage(role="user", contenu=user_prompt)],
             system_prompt=system_prompt,
         )
         self._data_evt.updateEvent(evt.id, "Déclenché")
         return message_proactif
-    
-    def calculer_timings_notification(self,timing_evenement: datetime,type_evenement: str,) -> list[datetime]:
+
+    def calculer_timings_notification(
+        self,
+        timing_evenement: datetime,
+        type_evenement: str,
+    ) -> list[datetime]:
         """
         Calcule la liste des datetimes auxquelles le compagnon doit envoyer
         un message proactif pour cet événement.
@@ -177,9 +199,9 @@ class EventModule:
         Returns:
             list[datetime]: Datetimes de notification dans le futur (> maintenant + 1min).
         """
-        regles    = _REGLES.get(type_evenement, _DEFAUT)
+        regles = _REGLES.get(type_evenement, _DEFAUT)
         maintenant = datetime.now()
-        marge     = timedelta(minutes=1)
+        marge = timedelta(minutes=1)
 
         timings = []
         for delta in regles:
@@ -188,9 +210,10 @@ class EventModule:
                 timings.append(t)
 
         return timings
+
     def format_mlt(self, mlt: MLT) -> str:
         return f"""
-        Enregistrement de la mémoire long terme sur l'utilisateur: 
+        Enregistrement de la mémoire long terme sur l'utilisateur:
         Date de création: {mlt.date_creation}
         Nombre de messages : {mlt.nombre_echanges}
         Humeur Générale : {mlt.humeur_generale}
@@ -199,11 +222,11 @@ class EventModule:
         Résumé de la conversation : {mlt.resume_conversation}
         Évènements mentionnés : {mlt.evenements_mentionnes}
     """
-    
-    def format_mct(self,mct: MCT) -> str:
+
+    def format_mct(self, mct: MCT) -> str:
         return f"""
         Enregistrement de la conversation actuelle avec l'utilisateur:
-        
+
         Date de création : {mct.date_creation}
         Sujet de la conversation : {mct.sujet}
         Intention de l'utilisateur : {mct.intention}
@@ -213,6 +236,7 @@ class EventModule:
         Langage de la conversation : {mct.langage}
         Tags (mots-clés) de la conversation: {mct.tags}
         """
+
     def _construire_contexte(self, evt: Evenement) -> dict:
         """
         Rassemble toutes les informations nécessaires au prompt proactif.
@@ -223,22 +247,24 @@ class EventModule:
         Returns:
             dict: Dictionnaire de variables à injecter dans le template de prompt.
         """
-        
+
         data_mct = DonneesMCT(db=self._db)
         data_mlt = DonneesMLT(db=self._db)
         data_profil = DonneesProfil(db=self._db)
         data_prefs = DonneesPreferences(db=self._db)
         data_compagnon = DonneesCompagnon(db=self._db)
 
-        profil    = data_profil.getProfil(self.id_profil)
-        prefs     = data_prefs.getPreferences(self.id_profil)
-        mct_list  = data_mct.getToday(self.id_profil)
-        mlt_liste       = data_mlt.getMLT(self.id_profil)
+        profil = data_profil.getProfil(self.id_profil)
+        prefs = data_prefs.getPreferences(self.id_profil)
+        mct_list = data_mct.getToday(self.id_profil)
+        mlt_liste = data_mlt.getMLT(self.id_profil)
         compagnon = data_compagnon.getCompagnon(1)
 
         # Formatage des préférences
         if prefs:
-            lignes_prefs = "\n".join(f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in prefs)
+            lignes_prefs = "\n".join(
+                f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in prefs
+            )
         else:
             lignes_prefs = "  Aucune préférence enregistrée."
 
@@ -255,13 +281,13 @@ class EventModule:
         age = 0
         if profil and profil.date_naissance:
             today = datetime.now()
-            dn    = profil.date_naissance
-            age   = today.year - dn.year
+            dn = profil.date_naissance
+            age = today.year - dn.year
             if (today.month, today.day) < (dn.month, dn.day):
                 age -= 1
 
         # Formatage du délai restant avant l'événement
-        delta             = evt.timing - datetime.now()
+        delta = evt.timing - datetime.now()
         minutes_restantes = max(0, int(delta.total_seconds() / 60))
 
         if minutes_restantes == 0:
@@ -269,7 +295,7 @@ class EventModule:
         elif minutes_restantes < 60:
             delai_str = f"dans {minutes_restantes} minute(s)"
         else:
-            heures  = minutes_restantes // 60
+            heures = minutes_restantes // 60
             minutes = minutes_restantes % 60
             if minutes > 0:
                 delai_str = f"dans environ {heures}h{minutes:02d}"
@@ -277,13 +303,13 @@ class EventModule:
                 delai_str = f"dans environ {heures} heure(s)"
 
         return {
-            "nom_compagnon"       : compagnon.modele if compagnon else "Compagnon",
-            "prenom"              : profil.prenom if profil else "l'utilisateur",
-            "nom"                 : profil.nom if profil else "",
-            "age"                 : age,
+            "nom_compagnon": compagnon.modele if compagnon else "Compagnon",
+            "prenom": profil.prenom if profil else "l'utilisateur",
+            "nom": profil.nom if profil else "",
+            "age": age,
             "description_evenement": evt.description or "événement sans description",
-            "delai_evenement"     : delai_str,
-            "lignes_preferences"  : lignes_prefs,
-            "lignes_mct"          : lignes_mct,
-            "contenu_mlt"         : contenu_mlt,
+            "delai_evenement": delai_str,
+            "lignes_preferences": lignes_prefs,
+            "lignes_mct": lignes_mct,
+            "contenu_mlt": contenu_mlt,
         }

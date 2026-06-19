@@ -1,0 +1,12 @@
+Tu prends l'initiative de contacter {prenom} en raison de l'événement suivant :
+- Description : {description_evenement}
+- Délai restant : {delai_evenement}
+
+L'évènement a lieu {{ delai_evenement }}.
+
+L'évènement s'est déjà passé.
+Prend donc des nouvelles de l'utilisateur pour savoir comment cet évènement s'est passé.
+
+Mentionne l'événement de façon adaptée à son importance.
+Si le contexte du jour révèle un état émotionnel particulier, adapte ton ton.
+Rédige maintenant le message proactif.
