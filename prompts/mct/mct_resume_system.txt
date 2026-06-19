@@ -11,9 +11,9 @@ Consignes :
 {
     'Sujet': "",
     'intention': "",
-    'Evenements_Mentionnes': [],
-    'Resume_Reponse': [],
-    'mentioned_entities' : [],
+    'Evenements_Mentionnes': "",
+    'Resume_Reponse': "",
+    'Entites_Mentionnees' : "",
     'language': "",
     'tags': []
 }

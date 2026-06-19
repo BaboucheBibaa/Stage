@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 from data.bd import Database
-from projectTypes import BaseLLMClient,Evenement, TypeEvenement
+from projectTypes import BaseLLMClient,Evenement, TypeEvenement, MCT,MLT, EventDetectorOutput
 from data.dataclasses import (
     DonneesEvenement,
     DonneesProfil,
@@ -45,37 +45,103 @@ def _charger_prompt(nom: str) -> str:
     """Charge un fichier texte depuis le dossier prompts/."""
     return (_PROMPTS / nom).read_text(encoding="utf-8")
 
-class EventAction:
-    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 5,fenetre_minutes: int = 30):
+class EventModule:
+    def __init__(self,llm: BaseLLMClient,id_profil: int, evt_repo: DonneesEvenement, intervalle_minutes: int = 5,fenetre_minutes: int = 30):
         self._db = Database()
         self.llm = llm
         self.id_profil = id_profil
         self.intervalle_minutes = intervalle_minutes
         self.fenetre_minutes = fenetre_minutes
-
+        self.evt_repo = evt_repo
         self._data_evt = DonneesEvenement(db=self._db)
+
+
+
+    def detecter(self, message_user: str) -> None:
+        prompt = _charger_prompt("event_detector.txt").format(
+            datetime_now=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        )
+        llm_reponse : EventDetectorOutput = self.llm.send(
+            messages=[LLMMessage(role="user", contenu=message_user)], 
+            system_prompt=prompt,
+            output_model=EventDetectorOutput
+        )
+        #model structuré de la réponse du LLM
+        if llm_reponse.importance is None:
+            return
+        
+        confiance = float(llm_reponse.confidence or 0.0)
+        if confiance < 0.6:
+            return
+        
+        importance = max(0.0, min(1.0, float(llm_reponse.importance or 0.5)))
+        if importance < 0.3:
+            return
+
+        # timing_evenement = heure réelle de l'événement
+        timing_evenement = llm_reponse.date
+        # importance : score fourni par le LLM, borné entre 0.0 et 1.0
+        importance = llm_reponse.importance or 0.5
+        try:
+            importance = max(0.0, min(1.0, float(importance)))
+        except (ValueError, TypeError):
+            importance = 0.5
+        for timing in _REGLES.get(llm_reponse.type.value, _DEFAUT):
+            notification = ""
+            if timing.total_seconds() < 0:
+                notification = "avant"
+            else:
+                notification = "après"
+            evenement_detecte = Evenement(
+                id_profil=self.id_profil,
+                description=llm_reponse.event,
+                timing=timing_evenement,
+                statut='Planifié',
+                timing_notification = notification,
+                type_evenement=llm_reponse.type.value,
+                importance=importance,
+            )
+            self.evt_repo.create(evenement_detecte)
 
     def verifier_et_declencher(self) -> list[str]:
         """
-        Récupère les événements futurs et déclenche ceux qui tombent
-        dans la fenêtre [maintenant - 1min, maintenant + fenetre_minutes].
-
-        Returns:
-            list[str]: Messages proactifs générés lors de ce cycle.
-                       Liste vide si aucun événement à déclencher.
+        Déclenche les messages proactifs dont l'heure de notification
+        se trouve dans la fenêtre de surveillance.
         """
-        maintenant  = datetime.now()
+
+        maintenant = datetime.now()
         borne_basse = maintenant - timedelta(minutes=1)
-        limite      = maintenant + timedelta(minutes=self.fenetre_minutes)
+        limite = maintenant + timedelta(minutes=self.fenetre_minutes)
 
         evenements = self._data_evt.getFuturs(self.id_profil)
-        messages: list[str] = []
+
+        messages = []
+
         for evt in evenements:
-            timings = self.calculer_timings_notification(evt.timing, evt.type_evenement)
-            for timing in timings:
-                if borne_basse <= timing <= limite:
+
+            regles = _REGLES.get(evt.type_evenement, _DEFAUT)
+
+            for delta in regles:
+
+                # On ne garde que les notifications correspondant
+                # au type demandé
+                if evt.timing_notification == "avant":
+                    if delta >= timedelta(0):
+                        continue
+
+                elif evt.timing_notification == "après":
+                    if delta <= timedelta(0):
+                        continue
+
+                timing_notification = evt.timing + delta
+
+                # La notification doit être envoyée maintenant
+                if borne_basse <= timing_notification <= limite:
+
                     message = self.__declencher(evt)
+
                     messages.append(message)
+
         return messages
 
     def __declencher(self, evt: Evenement) -> str:
@@ -95,7 +161,6 @@ class EventAction:
         message_proactif = self.llm.send(
             messages= [LLMMessage(role="user", contenu=user_prompt)],
             system_prompt=system_prompt,
-            
         )
         self._data_evt.updateEvent(evt.id, "Déclenché")
         return message_proactif
@@ -123,7 +188,31 @@ class EventAction:
                 timings.append(t)
 
         return timings
-
+    def format_mlt(self, mlt: MLT) -> str:
+        return f"""
+        Enregistrement de la mémoire long terme sur l'utilisateur: 
+        Date de création: {mlt.date_creation}
+        Nombre de messages : {mlt.nombre_echanges}
+        Humeur Générale : {mlt.humeur_generale}
+        Centres d'intérêts : {mlt.centres_interets}
+        Thèmes abordés : {mlt.themes_abordes}
+        Résumé de la conversation : {mlt.resume_conversation}
+        Évènements mentionnés : {mlt.evenements_mentionnes}
+    """
+    
+    def format_mct(self,mct: MCT) -> str:
+        return f"""
+        Enregistrement de la conversation actuelle avec l'utilisateur:
+        
+        Date de création : {mct.date_creation}
+        Sujet de la conversation : {mct.sujet}
+        Intention de l'utilisateur : {mct.intention}
+        Évènements mentionnés par l'utilisateur : {mct.evenements_mentionnes}
+        Résumé de la réponse proposée par le compagnon virtuel : {mct.resume_reponse}
+        Entités (Personnes, lieux, entreprises, etc...) mentionnées dans la conversation : {mct.entites_mentionnees}
+        Langage de la conversation : {mct.langage}
+        Tags (mots-clés) de la conversation: {mct.tags}
+        """
     def _construire_contexte(self, evt: Evenement) -> dict:
         """
         Rassemble toutes les informations nécessaires au prompt proactif.
@@ -144,7 +233,7 @@ class EventAction:
         profil    = data_profil.getProfil(self.id_profil)
         prefs     = data_prefs.getPreferences(self.id_profil)
         mct_list  = data_mct.getToday(self.id_profil)
-        mlt       = data_mlt.getRecente(self.id_profil)
+        mlt_liste       = data_mlt.getMLT(self.id_profil)
         compagnon = data_compagnon.getCompagnon(1)
 
         # Formatage des préférences
@@ -155,10 +244,13 @@ class EventAction:
 
         # Formatage de la MCT du jour (ordre chronologique)
         if mct_list:
-            lignes_mct = "\n".join(f"  {mct.message}" for mct in reversed(mct_list))
+            lignes_mct = "\n".join(self.format_mct(mct) for mct in reversed(mct_list))
         else:
             lignes_mct = "  Aucun échange aujourd'hui pour l'instant."
-
+        if mlt_liste:
+            contenu_mlt = "\n".join(self.format_mct(mlt) for mlt in reversed(mlt_liste))
+        else:
+            contenu_mlt = "Aucune mémoire long terme sauvegardée pour l'instant"
         # Calcul de l'âge
         age = 0
         if profil and profil.date_naissance:
@@ -193,5 +285,5 @@ class EventAction:
             "delai_evenement"     : delai_str,
             "lignes_preferences"  : lignes_prefs,
             "lignes_mct"          : lignes_mct,
-            "contenu_mlt"         : mlt.text if mlt else "Aucune mémoire long terme disponible.",
+            "contenu_mlt"         : contenu_mlt,
         }

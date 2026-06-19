@@ -19,6 +19,11 @@ class LLMResponse(BaseModel):
 
 # --------------------------------- modèles des types reçus par le LLM -----------------------------------------
 
+class AnalyseHumeurOutput(BaseModel):
+    emotion_actuelle: str
+    niveau_stress: float
+    envie_interagir: float
+    confiance: float
 
 class TypeEvenement(str, Enum):
     RENDEZ_VOUS = "rendez-vous"
@@ -37,9 +42,9 @@ class EventDetectorOutput(BaseModel):
 class ResumeMCTOutput(BaseModel):
     Sujet: str
     intention: str
-    Evenements_Mentionnes: list[str]
-    Resume_Reponse: list[str]
-    mentioned_entities: list[str]
+    Evenements_Mentionnes: str
+    Resume_Reponse: str
+    Entites_Mentionnees: str
     language: str
     tags: list[str]
 
@@ -47,10 +52,9 @@ class ResumeMLTOutput(BaseModel):
     date: datetime
     nombre_echanges: int
     humeur_generale: str
-    themes_abordes: list[str]
-    centres_interets: list[str]
-    evenements_mentionnes: list[str]
-    points_attention: list[str]
+    themes_abordes: str
+    centres_interets: str
+    evenements_mentionnes: str
     resume_conversation: str 
 
 # -------------------------- modèles des types en BD ----------------------------------------------
@@ -124,7 +128,6 @@ class Evenement:
     Ces événements peuvent déclencher des actions proactives du compagnon, à l'heure définie dans timing
     
     Attributs:
-        id (int): Identifiant unique de l'événement en BD
         id_profil (int): Identifiant du profil concerné par l'événement
         description (str): Description détaillée de l'événement
         timing (datetime): Moment/date de l'événement indiqué
@@ -152,15 +155,18 @@ class MLT:
     capturer les éléments importants sur le profil utilisateur.
     
     Attributs:
-        id (int): Identifiant unique de l'entrée MLT en BD
         id_profil (int): Identifiant du profil associé
         date_creation (datetime): Timestamp de création de l'entrée
         text (str): Contenu texte du résumé ou fait persistant
     """
-    id: int = None
-    id_profil : int = None
-    date_creation: datetime = None
-    text : str = None
+    id_profil : int
+    date_creation: datetime
+    nombre_echanges: int
+    humeur_generale: str
+    themes_abordes: str
+    centres_interets: str
+    evenements_mentionnes: str
+    resume_conversation: str
     
 @dataclass
 class MCT:
@@ -176,10 +182,15 @@ class MCT:
         date_creation (datetime): Timestamp de création de l'entrée
         message (str): Contenu de l'échange (message utilisateur | réponse assistant)
     """
-    id: int = None
     id_profil: int = None
     date_creation : datetime = None
-    message: str = None
+    sujet: str = None
+    intention: str = None
+    evenements_mentionnes : str = None
+    langage : str = None
+    entites_mentionnees : str = None
+    resume_reponse : str = None
+    tags : str = None
 
 @dataclass
 class Preference:
@@ -251,8 +262,8 @@ class BaseLLMClient(ABC):
     @abstractmethod
     def send(
         self,
-        model: str,
         messages: list[LLMMessage],
+        model: str="gemma4:31b-cloud",
         system_prompt: str | None = None,
         output_model: BaseModel | None = None,
         options: dict | None = None,

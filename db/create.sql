@@ -61,13 +61,19 @@ CREATE TABLE IF NOT EXISTS Evenement(
     ID_Profil INT NOT NULL,
     Type_Evenement VARCHAR(15),
     Importance FLOAT DEFAULT 0.5,
+    Timing_Evenement VARCHAR(6),
     CONSTRAINT fk_event_profil FOREIGN KEY (ID_Profil) 
         REFERENCES Profil(ID_Profil) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS MLT(
     ID_MLT INT PRIMARY KEY AUTO_INCREMENT,
-    Donnees TEXT,
+    Nombre_Echanges INT,
+    Humeur_Generale VARCHAR(50),
+    Themes_Abordes TEXT,
+    Centres_Interets TEXT,
+    Evenements_Mentionnes TEXT,
+    Resume_Conversation TEXT,
     Date_Creation DATETIME,
     ID_Profil INT NOT NULL,
 
@@ -78,10 +84,16 @@ CREATE TABLE IF NOT EXISTS MCT(
     ID_MCT INT PRIMARY KEY AUTO_INCREMENT,
     Date_Creation DATETIME,
     ID_Profil INT NOT NULL,
-    Message TEXT,
+    Sujet VARCHAR(50),
+    Intention VARCHAR(100),
+    Evenements_Mentionnes VARCHAR(150),
+    Resume_Reponse TEXT,
+    Entites_Mentionnees VARCHAR(70),
+    Langage VARCHAR(20),
+    Tags VARCHAR(70),
     CONSTRAINT fk_mct_profil FOREIGN KEY (ID_Profil) REFERENCES Profil(ID_Profil) ON DELETE CASCADE
 );
 
 INSERT INTO Profil (Nom,Prenom,Date_Naissance) VALUES ('Delcroix','Lucas','2005-09-11');
 INSERT INTO Preferences (Sujet,Niveau,ID_Profil) VALUES ('Jeux vidéos',0.7,1);
-INSERT INTO Compagnon_Virtuel (Modele, Empathie, Professionalisme, Patience, Humour) VALUES ('mistral', 0.7, 0.8, 0.9, 0.6);
+INSERT INTO Compagnon_Virtuel (Modele, Empathie, Professionalisme, Patience, Humour) VALUES ('Cristalline', 0.7, 0.8, 0.9, 0.6);

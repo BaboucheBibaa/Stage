@@ -1,0 +1,3 @@
+Voici les données de l'utilisateur sur le long terme:
+
+{donnees_mlt}

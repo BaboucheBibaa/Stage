@@ -3,7 +3,7 @@
 import threading
 
 from projectTypes import BaseLLMClient
-from .EventAction import EventAction
+from .EventModule import EventModule
 from .GestionSorties import GestionSorties
 class DeclenchementProactivite:
     """
@@ -15,7 +15,7 @@ class DeclenchementProactivite:
         intervalle_minutes (int): Fréquence de vérification en minutes.
     """
 
-    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 5, gestionnaire_sortie : GestionSorties = None):
+    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 1, gestionnaire_sortie : GestionSorties = None):
         self.llm = llm
         self.id_profil = id_profil
         self.intervalle_minutes = intervalle_minutes
@@ -23,14 +23,14 @@ class DeclenchementProactivite:
 
         #codé en dur ici, voir pour le mettre dans le fichier de config ?
         self.fenetre_minutes = 30
-        self.event_actions = EventAction(self.llm, self.id_profil, self.intervalle_minutes, self.fenetre_minutes)
+        self.event_module = EventModule(self.llm, self.id_profil, self.intervalle_minutes, self.fenetre_minutes)
 
         # contrôle du signal d'arrêt du thread
         self._stop_event = threading.Event()
         self._thread = threading.Thread(
             #ce thread exécute la fonction boucle en parallèle de l'exécution du main.
             target=self._boucle,
-            name="ProactiveScheduler",
+            name="DeclenchementProactivite",
             daemon=True,
         )
 
@@ -47,10 +47,9 @@ class DeclenchementProactivite:
         #tant que le flag du thread est pas à true
         while not self._stop_event.is_set():
             #proactivité événementielle (vérification et déclenchement d'une action proactive si nécessaire)
-            messages = self.event_actions.verifier_et_declencher()
+            messages = self.event_module.verifier_et_declencher()
             #on met en queue les événements proactifs déclenchés par la proactivité événementielle (ce sera très souvent un seul événement, mais on fait une liste au cas où plusieurs événements doivent se déclencher dans la même plage horaire)
             for message in messages:
-                print(message)
                 if self._output:
                     #proactif sert surtout pour de la clarté, idéalement si on peut afficher les messages proactifs différemment.
                     self._output.enqueue(message, source="proactif")

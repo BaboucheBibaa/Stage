@@ -1,0 +1,5 @@
+Les données à analyser représentent une conversation entre l'utilisateur et son compagnon virtuel.
+
+Voici les données:
+
+{lignes_mct}

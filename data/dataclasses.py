@@ -380,7 +380,7 @@ class DonneesEvenement:
             int: Identifiant de l'événement créé
         """
         self._db.execute(
-            """INSERT INTO Evenement (Timing, Statut, Contexte, ID_Profil, Type_Evenement, Importance, Timing_Notification)
+            """INSERT INTO Evenement (Timing, Statut, Contexte, ID_Profil, Type_Evenement, Importance, Timing_Evenement)
                 VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (evt.timing, evt.statut, evt.description, evt.id_profil, evt.type_evenement, evt.importance, evt.timing_notification),
         )
@@ -409,14 +409,14 @@ class DonneesEvenement:
         )
         return [
             Evenement(
-                id=l["ID_Event"],
+                id=l['ID_Event'],
                 timing=l["Timing"],
                 statut=l["Statut"],
                 description=l["Contexte"],
                 id_profil=l["ID_Profil"],
                 type_evenement=l["Type_Evenement"],
                 importance=l["Importance"] if l["Importance"] is not None else 0.5,
-                timing_notification=l["Timing_Notification"]
+                timing_notification=l["Timing_Evenement"]
             )
             for l in lignes
         ]
@@ -441,7 +441,7 @@ class DonneesEvenement:
         """Met à jour le score d'importance d'un événement.
 
         Utile pour affiner le score après la détection initiale
-        (ex: recalcul basé sur la proximité temporelle).
+        (ex: recalcul).
 
         Args:
             id_event (int): Identifiant de l'événement
@@ -475,8 +475,8 @@ class DonneesMLT:
             int: Identifiant de l'entrée MLT créée
         """
         self._db.execute(
-            "INSERT INTO MLT (Donnees, Date_Creation, ID_Profil) VALUES (?, ?, ?)",
-            (mlt.text, mlt.date_creation, mlt.id_profil),
+            "INSERT INTO MLT (Nombre_Echanges, Humeur_Generale, Themes_Abordes, Centres_Interets, Evenements_Mentionnes, Resume_Conversation, Date_Creation, ID_Profil) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (mlt.nombre_echanges, mlt.humeur_generale, mlt.themes_abordes, mlt.centres_interets, mlt.evenements_mentionnes, mlt.resume_conversation, mlt.date_creation, mlt.id_profil),
         )
         result = self._db.executeFetch(
             """SELECT ID_MLT FROM MLT WHERE ID_Profil = ? ORDER BY DATE_CREATION DESC LIMIT 1""",
@@ -496,7 +496,8 @@ class DonneesMLT:
             "SELECT * FROM MLT WHERE ID_Profil = ?", (id_profil,)
         )
         if result:
-            return [MLT(id=l['ID_MLT'], text=l['Donnees'], id_profil=l['ID_Profil'], date_creation=l['Date_Creation']) for l in result]
+            return 
+        [MLT(nombre_echanges=l["Nombre_Echanges"], humeur_generale=l["Humeur_Generale"], themes_abordes=l["Themes_Abordes"], centres_interets=l["Centres_Interets"], evenements_mentionnes=l["Evenements_Mentionnes"], resume_conversation=l["Resume_Conversation"], id_profil=l["ID_Profil"], date_creation=l["Date_Creation"]) for l in result]
     def getRecente(self, id_profil: int) -> MLT | None:
         """Récupère la MLT la plus récente d'un profil
 
@@ -512,7 +513,7 @@ class DonneesMLT:
         )
         if result:
             l = result[0]
-            return MLT(id=l["ID_MLT"], text=l["Donnees"], id_profil=l["ID_Profil"], date_creation=l["Date_Creation"])
+            return MLT(id=l["ID_MLT"], nombre_echanges=l["Nombre_Echanges"], humeur_generale=l["Humeur_Generale"], themes_abordes=l["Themes_Abordes"], centres_interets=l["Centres_Interets"], evenements_mentionnes=l["Evenements_Mentionnes"], resume_conversation=l["Resume_Conversation"], id_profil=l["ID_Profil"], date_creation=l["Date_Creation"])
         return None
     
 class DonneesMCT:
@@ -532,10 +533,10 @@ class DonneesMCT:
         Returns:
             int: Identifiant de l'entrée MCT créée
         """
-        self._db.execute(
-            "INSERT INTO MCT (Date_Creation, ID_Profil, Message) VALUES (?, ?, ?)",
-            (mct.date_creation, mct.id_profil, mct.message),
-        )
+        print(self._db.execute(
+            "INSERT INTO MCT (Date_Creation, ID_Profil, Sujet, Intention, Evenements_Mentionnes, Resume_Reponse, Entites_Mentionnees, Langage, Tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (mct.date_creation, mct.id_profil, mct.sujet, mct.intention, mct.evenements_mentionnes, mct.resume_reponse, mct.entites_mentionnees, mct.langage, mct.tags),
+        ))
         result = self._db.executeFetch(
             """SELECT ID_MCT FROM MCT WHERE ID_Profil = ? ORDER BY DATE_CREATION DESC LIMIT 1""",
             (mct.id_profil,)
@@ -557,8 +558,16 @@ class DonneesMCT:
             (id_profil, str(datetime.now().date())),
         )
         return [
-            MCT(id=l["ID_MCT"], message=l["Message"],
-                id_profil=l["ID_Profil"], date_creation=l["Date_Creation"])
+            MCT(
+                sujet=l["Sujet"],
+                intention=l["Intention"],
+                evenements_mentionnes=l["Evenements_Mentionnes"],
+                id_profil=l["ID_Profil"], 
+                date_creation=l["Date_Creation"],
+                resume_reponse=l["Resume_Reponse"],
+                entites_mentionnees=l["Entites_Mentionnees"],
+                tags=l['Tags'],
+                langage=l['Langage'])
             for l in lignes
         ]
 

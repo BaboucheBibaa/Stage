@@ -2,12 +2,10 @@ import queue
 from dataclasses import dataclass
 from typing import Literal
 
-
 @dataclass
 class MessageAffichage:
     texte: str
     source: Literal["dialogue", "proactif"] = "dialogue"
-
 
 class GestionSorties:
     """

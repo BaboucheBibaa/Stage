@@ -7,9 +7,8 @@ from data.dataclasses import (
 )
 from spacy import load
 from data.bd import Database
-import json
 from pathlib import Path
-from .EventDetection import DetectionEvent
+from .EventModule import EventModule
 
 _TEMPLATE = (Path(__file__).parent / "../prompts/system_prompt.txt").read_text(encoding="utf-8")
 
@@ -63,8 +62,8 @@ class DialogueModule:
         self._historique.append(LLMMessage(role="assistant", contenu=response))
         #détection d'événement dans un message
         data_evenement = DonneesEvenement(self._db)
-        detection_event = DetectionEvent(self.llm, data_evenement, self.id_profil)
-        detection_event.detecter(message_user)
+        event_module = EventModule(self.llm, data_evenement, self.id_profil)
+        event_module.detecter(message_user)
         
         self._sauvegarder_message(message_user, response)
         self._add_MCT(message_user, response)
@@ -102,7 +101,12 @@ class DialogueModule:
         mlt_id = self.data_mlt.create(MLT(
             id_profil=self.id_profil,
             date_creation=datetime.now(),  # Datetime objet, pas string
-            text=mlt_resume.model_dump_json()
+            resume_conversation=mlt_resume.resume_conversation,
+            nombre_echanges=mlt_resume.nombre_echanges,
+            themes_abordes=mlt_resume.themes_abordes,
+            centres_interets=mlt_resume.centres_interets,
+            humeur_generale=mlt_resume.humeur_generale,
+            evenements_mentionnes=mlt_resume.evenements_mentionnes
         ))
         if mlt_id:
             # Si ça a bien été créé, alors on vide la MCT
@@ -117,13 +121,18 @@ class DialogueModule:
         resume_obj = self.resumer_echange(self.llm, msg_user, rep_assistant)
         
         # Convertir l'objet Pydantic en JSON pour le stocker
-        message = resume_obj.model_dump_json()
-        
-        mct_id = self.data_mct.create(MCT(
-            message=message,
+        mct_creee = MCT(
+            sujet=resume_obj.Sujet,
+            intention=resume_obj.intention,
+            evenements_mentionnes=resume_obj.Evenements_Mentionnes,
+            resume_reponse=resume_obj.Resume_Reponse,
+            entites_mentionnees=resume_obj.Entites_Mentionnees,
+            langage=resume_obj.language,
+            tags=resume_obj.tags,
             id_profil=self.id_profil,
-            date_creation=datetime.now(),
-        ))
+            date_creation=datetime.now()
+        )
+        mct_id = self.data_mct.create(mct_creee)
         
         if mct_id:
             return True
@@ -153,12 +162,6 @@ class DialogueModule:
         except Exception as e:
             print(f"Erreur lors du calcul de l'âge: {e}")
             return 0
-    def format_mct(self,mct: MCT) -> str:
-        try:
-            data : dict = json.loads(mct.message)
-            return f"  [{mct.date_creation:%H:%M}] {data.get('sujet','')} — {data.get('intention_utilisateur','')}"
-        except json.JSONDecodeError:
-            return f"  {mct.message}"
     
     def recup_MCT_pertinente(self, message_user: str, seuil: float = 0.6) -> list[MCT]:
         mct_pertinente: list[MCT] = []
@@ -166,12 +169,7 @@ class DialogueModule:
         donnees_mct = self.data_mct.getToday(self.id_profil)
         for donnee_mct in donnees_mct:
             # Extraire le texte depuis le JSON MCT
-            try:
-                data : dict[str,str] = json.loads(donnee_mct.message)
-                texte_compare = f"{data.get('sujet', '')} {data.get('intention_utilisateur', '')} {' '.join(data.get('tags', []))}"
-            except (json.JSONDecodeError, AttributeError):
-                texte_compare = donnee_mct.message
-            
+            texte_compare = f"{donnee_mct.resume_reponse}"
             doc_mct = nlp(texte_compare)
             if doc.vector_norm != 0 or doc_mct.vector_norm != 0:
                 if doc.similarity(doc_mct) > seuil:
@@ -204,7 +202,7 @@ class DialogueModule:
         mlt_existante : texte de la dernière MLT en base (peut être vide)
         """
         lignes = [
-            f"Résumé de la conversation à {msg.date_creation} : {msg.message}"
+            f"Résumé de la conversation à {msg.date_creation} : {msg.resume_reponse}"
             for msg in historique
         ]
         system_prompt = _charger("mlt/mlt_resume_system.txt")
@@ -217,12 +215,39 @@ class DialogueModule:
             output_model=ResumeMLTOutput
         )
         return res
+    
+    def format_mct(self,mct: MCT) -> str:
+        return f"""
+        Enregistrement de la conversation actuelle avec l'utilisateur:
+        
+        Date de création : {mct.date_creation}
+        Sujet de la conversation : {mct.sujet}
+        Intention de l'utilisateur : {mct.intention}
+        Évènements mentionnés par l'utilisateur : {mct.evenements_mentionnes}
+        Résumé de la réponse proposée par le compagnon virtuel : {mct.resume_reponse}
+        Entités (Personnes, lieux, entreprises, etc...) mentionnées dans la conversation : {mct.entites_mentionnees}
+        Langage de la conversation : {mct.langage}
+        Tags (mots-clés) de la conversation: {mct.tags}
+        """
+    def format_mlt(self, mlt: MLT) -> str:
+        return f"""
+        Enregistrement de la mémoire long terme sur l'utilisateur: 
+        Date de création: {mlt.date_creation}
+        Nombre de messages : {mlt.nombre_echanges}
+        Humeur Générale : {mlt.humeur_generale}
+        Centres d'intérêts : {mlt.centres_interets}
+        Thèmes abordés : {mlt.themes_abordes}
+        Résumé de la conversation : {mlt.resume_conversation}
+        Évènements mentionnés : {mlt.evenements_mentionnes}
+    """
+    
+    
     def _build_system_prompt(self, mct_Pertinente : list[MCT]) -> str:
         data_prefs = DonneesPreferences(db= self._db)
         data_profil = DonneesProfil(db = self._db)
         data_sujets = DonneesSujetSensible(db = self._db)
         
-        mlt = self.data_mlt.getRecente(self.id_profil)
+        liste_mlt = self.data_mlt.getMLT(self.id_profil)
         profil = data_profil.getProfil(self.id_profil)
 
         prefs = data_prefs.getPreferences(self.id_profil)
@@ -231,7 +256,6 @@ class DialogueModule:
         if not profil:
             raise ValueError(f"Profil avec l'ID {self.id_profil} introuvable en base de données")
         
-
         # Préférences
         if prefs:
             lignes_preferences = "\n".join(f"  - {p.sujet} (intérêt : {p.niveau:.0%})" for p in prefs)
@@ -254,8 +278,8 @@ class DialogueModule:
             lignes_sujets_sensibles = "  Aucun sujet sensible enregistré."
 
         # MLT
-        if mlt:
-            contenu_mlt = mlt.text.strip() if mlt.text else "Aucune mémoire long terme disponible pour l'instant."
+        if liste_mlt:
+            contenu_mlt = "\n".join(self.format_mct(mlt) for mlt in reversed(liste_mlt))
         else:
             contenu_mlt = " Aucune mémoire long terme sauvegardée."
         # MCT

@@ -11,10 +11,9 @@ Consignes :
     'date': "",
     'nombre_echanges': 0,
     'humeur_generale': "",
-    'themes_abordes': [],
-    'centres_interets': [],
-    'evenements_mentionnes': [],
-    'points_attention': [],
+    'themes_abordes': "",
+    'centres_interets': "",
+    'evenements_mentionnes': "",
     'resume_conversation': ""
 }
 
