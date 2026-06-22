@@ -5,5 +5,4 @@ llm:
  
 companion:
   name: "Apagnan"
-  language: "fr"
   proactive_interval_minutes: 60

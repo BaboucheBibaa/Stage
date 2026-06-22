@@ -34,15 +34,17 @@ def boucle_affichage(router: GestionSorties) -> None:
         else:
             print(f" Compagnon : {item.texte}\n")
 
-
 def boucle_chat(dm: DialogueModule, router: GestionSorties) -> None:
     """
     Boucle principale de conversation.
     Lit l'entrée utilisateur, appelle DialogueModule.chat(),
     et dépose la réponse dans la queue
     """
+    with open("config.yaml") as f:
+        config = yaml.safe_load(f)
+
     print(SEPARATEUR)
-    print(f" Compagnon prêt | modèle : {dm.compagnon.modele}")
+    print(f" Compagnon prêt | modèle : {config["companion"]['name']}")
     print(f" Bonjour {dm.profil.prenom} ! (tape 'quit' pour quitter)")
     print(SEPARATEUR)
 
@@ -67,8 +69,6 @@ def boucle_chat(dm: DialogueModule, router: GestionSorties) -> None:
 
 
 def main() -> None:
-    with open("config.yaml") as f:
-        config = yaml.safe_load(f)
 
     llm    = OllamaClient()
     router = GestionSorties()

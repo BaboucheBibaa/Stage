@@ -1,30 +1,46 @@
-from projectTypes import MCT, BaseLLMClient, LLMMessage,AnalyseHumeurOutput
-from data.dataclasses import DonneesMCT,DonneesCompagnon, DonneesProfil, DonneesMLT
+from projectTypes import MCT, BaseLLMClient, LLMMessage,AnalyseHumeurOutput, MLT
+from data.dataclasses import DonneesMCT, DonneesProfil, DonneesMLT
 from pathlib import Path
 from datetime import datetime
-import json
-
+import yaml
 _PROMPTS = Path(__file__).parent / "../" "prompts"
 
 def _charger(nom: str) -> str:
     return (_PROMPTS / nom).read_text(encoding="utf-8")
 
 class InitiativeModule():
-    def __init__(self, id_profil : int, data_mct : DonneesMCT, data_compagnon: DonneesCompagnon, data_profil: DonneesProfil, data_mlt: DonneesMLT, llm: BaseLLMClient):
+    def __init__(self, id_profil : int, data_mct : DonneesMCT, data_profil: DonneesProfil, data_mlt: DonneesMLT, llm: BaseLLMClient):
         self._data_mct = data_mct
         self._id_profil = id_profil
         self.llm = llm
-        self.compagnon = data_compagnon.getCompagnon(1)
         self.profil = data_profil.getProfil(self._id_profil)
         self._data_mlt = data_mlt.getMLT(self._id_profil)
         
-    def format_mct(self,mct: MCT) -> str:
-        try:
-            data : dict = json.loads(mct.message)
-            return f"  [{mct.date_creation:%H:%M}] {data.get('sujet','')} — {data.get('Resume_Reponse','')}"
-        except json.JSONDecodeError:
-            return f"  {mct.message}"
+    def format_mlt(self, mlt: MLT) -> str:
+        return f"""
+        Enregistrement de la mémoire long terme sur l'utilisateur:
+        Date de création: {mlt.date_creation}
+        Nombre de messages : {mlt.nombre_echanges}
+        Humeur Générale : {mlt.humeur_generale}
+        Centres d'intérêts : {mlt.centres_interets}
+        Thèmes abordés : {mlt.themes_abordes}
+        Résumé de la conversation : {mlt.resume_conversation}
+        Évènements mentionnés : {mlt.evenements_mentionnes}
+    """
 
+    def format_mct(self, mct: MCT) -> str:
+        return f"""
+        Enregistrement de la conversation actuelle avec l'utilisateur:
+
+        Date de création : {mct.date_creation}
+        Sujet de la conversation : {mct.sujet}
+        Intention de l'utilisateur : {mct.intention}
+        Évènements mentionnés par l'utilisateur : {mct.evenements_mentionnes}
+        Résumé de la réponse proposée par le compagnon virtuel : {mct.resume_reponse}
+        Entités (Personnes, lieux, entreprises, etc...) mentionnées dans la conversation : {mct.entites_mentionnees}
+        Langage de la conversation : {mct.langage}
+        Tags (mots-clés) de la conversation: {mct.tags}
+        """
     def analyse_conversation(self) -> AnalyseHumeurOutput:
         mct_recente = self._data_mct.getToday(self._id_profil)
         lignes_mct = "\n".join(self.format_mct(mct) for mct in reversed(mct_recente))
@@ -60,14 +76,31 @@ class InitiativeModule():
             return 0
 
     def prise_initiative(self):
+        
+        with open("config.yaml") as f:
+            config = yaml.safe_load(f)
         resultat_analyse = self.analyse_conversation()
-        if resultat_analyse.confiance > 0.7 and resultat_analyse.envie_interagir > 0.6:
+        print(resultat_analyse.confiance)
+        print(resultat_analyse.envie_interagir)
+        print(self._data_mlt)
+        if resultat_analyse.confiance > 0.7 and resultat_analyse.envie_interagir >= 0.6:
             prompt_initiative_system = _charger("initiative/prompt_initiative_system.txt").format(
                 date_jour=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                nom_compagnon=self.compagnon.modele,
+                nom_compagnon=config["companion"]['name'],
                 prenom=self.profil.prenom,
                 nom=self.profil.nom,
                 age=self._calculer_age(self.profil.date_naissance),
-                contenu_mlt = 
-
             )
+            if (self._data_mlt is not None):
+                donnees_mlt = [self.format_mlt(mlt) for mlt in self._data_mlt]
+            else:
+                donnees_mlt = "Aucune mémoire long terme pour l'utilisateur."
+            prompt_initiative_user = _charger("initiative/prompt_initiative_user.txt").format(
+                donnees_mlt=donnees_mlt
+            )
+            print(prompt_initiative_user)
+            reponse = self.llm.send(
+                messages=[LLMMessage(role="user", contenu=prompt_initiative_user)],
+                system_prompt=prompt_initiative_system,
+            )
+            print(reponse)

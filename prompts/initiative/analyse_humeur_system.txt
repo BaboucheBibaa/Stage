@@ -12,5 +12,5 @@ Ce JSON doit avoir cette structure :
 
 Décris l'émotion de l'utilisateur en quelques mots.
 Détermine un niveau de stress par rapport aux messages précédents, entre 0 et 1.
-Est-ce que l'utilisateur a besoin d'interaction pour le relancer sur un sujet dans la journée ou sur quelque chose qui a pu mal se passer ses derniers jours, ou encore pour prendre des nouvelles concernant des choses qui se sont passées.
+Est-ce que l'utilisateur a envie d'avoir une interaction avec toi en ce moment ? Estime cela en te basant sur son émotion actuelle. Établis une valeur entre 0 et 1.
 Détermine une valeur de confiance quant à ton analyse entre 0 et 1.

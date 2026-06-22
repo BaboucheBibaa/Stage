@@ -3,7 +3,6 @@ from pathlib import Path
 
 from data.bd import Database
 from data.dataclasses import (
-    DonneesCompagnon,
     DonneesEvenement,
     DonneesMCT,
     DonneesMLT,
@@ -19,12 +18,13 @@ from projectTypes import (
     EventDetectorOutput,
     TypeEvenement,
 )
+import yaml
 
 # Chaque type peut produire PLUSIEURS notifications (liste de timedelta).
 _REGLES: dict[str, list[timedelta]] = {
     TypeEvenement.RENDEZ_VOUS: [
         timedelta(hours=-1),  # 1 heure avant
-        timedelta(minutes=3),  # 1 heure après ("comment ça s'est passé ?")
+        timedelta(hours=1),  # 1 heure après ("comment ça s'est passé ?")
     ],
     TypeEvenement.EXAMEN: [
         timedelta(hours=-13),  # veille au soir
@@ -247,18 +247,18 @@ class EventModule:
         Returns:
             dict: Dictionnaire de variables à injecter dans le template de prompt.
         """
+        with open("config.yaml") as f:
+            config = yaml.safe_load(f)
 
         data_mct = DonneesMCT(db=self._db)
         data_mlt = DonneesMLT(db=self._db)
         data_profil = DonneesProfil(db=self._db)
         data_prefs = DonneesPreferences(db=self._db)
-        data_compagnon = DonneesCompagnon(db=self._db)
 
         profil = data_profil.getProfil(self.id_profil)
         prefs = data_prefs.getPreferences(self.id_profil)
         mct_list = data_mct.getToday(self.id_profil)
         mlt_liste = data_mlt.getMLT(self.id_profil)
-        compagnon = data_compagnon.getCompagnon(1)
 
         # Formatage des préférences
         if prefs:
@@ -303,7 +303,7 @@ class EventModule:
                 delai_str = f"dans environ {heures} heure(s)"
 
         return {
-            "nom_compagnon": compagnon.modele if compagnon else "Compagnon",
+            "nom_compagnon": config['companion']['name'],
             "prenom": profil.prenom if profil else "l'utilisateur",
             "nom": profil.nom if profil else "",
             "age": age,

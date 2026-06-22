@@ -26,6 +26,8 @@ from projectTypes import (
     ResumeMLTOutput,
 )
 
+import yaml
+
 from .EventModule import EventModule
 
 _TEMPLATE = (Path(__file__).parent / "../prompts/system_prompt.txt").read_text(
@@ -286,7 +288,9 @@ class DialogueModule:
 
         prefs = data_prefs.getPreferences(self.id_profil)
         sensibles = data_sujets.getSujets(self.id_profil)
-
+        
+        with open("config.yaml") as f:
+            config = yaml.safe_load(f)
         if not profil:
             raise ValueError(
                 f"Profil avec l'ID {self.id_profil} introuvable en base de données"
@@ -330,7 +334,7 @@ class DialogueModule:
 
         return _TEMPLATE.format(
             date_jour=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            nom_compagnon=self.compagnon.modele,
+            nom_compagnon=config["companion"]['name'],
             prenom=profil.prenom,
             nom=profil.nom,
             age=self._calculer_age(profil.date_naissance),

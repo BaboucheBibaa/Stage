@@ -545,14 +545,14 @@ class DonneesMLT:
         )
         return result[0]["ID_MLT"] if result else None
 
-    def getMLT(self, id_profil: int) -> list[MLT] | None:
+    def getMLT(self, id_profil: int) -> list[MLT]:
         """Récupère toute la MLT d'un profil.
 
         Args:
             id_profil (int): Identifiant du profil
 
         Returns:
-            list[MLT] | None: Liste de toutes les MLT du profil
+            list[MLT]: Liste de toutes les MLT du profil
         """
         result = self._db.executeFetch(
             "SELECT * FROM MLT WHERE ID_Profil = ?", (id_profil,)
