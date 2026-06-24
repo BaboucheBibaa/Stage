@@ -2,9 +2,11 @@
 
 import threading
 
-from projectTypes import BaseLLMClient
+from data.projectTypes import BaseLLMClient
 from .EventModule import EventModule
 from .GestionSorties import GestionSorties
+import yaml
+
 class DeclenchementProactivite:
     """
     Thread de fond qui se déclenche toutes les intervalle_minutes.
@@ -16,13 +18,16 @@ class DeclenchementProactivite:
     """
 
     def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 1, gestionnaire_sortie : GestionSorties = None):
+        with open("config.yaml") as f:
+            config = yaml.safe_load(f)
+
         self.llm = llm
         self.id_profil = id_profil
         self.intervalle_minutes = intervalle_minutes
         self._output = gestionnaire_sortie
 
         #codé en dur ici, voir pour le mettre dans le fichier de config ?
-        self.fenetre_minutes = 30
+        self.fenetre_minutes = config['companion']['fenetre_minutes']
         self.event_module = EventModule(self.llm, self.id_profil, self.intervalle_minutes, self.fenetre_minutes)
 
         # contrôle du signal d'arrêt du thread

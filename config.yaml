@@ -5,4 +5,4 @@ llm:
  
 companion:
   name: "Apagnan"
-  proactive_interval_minutes: 60
+  fenetre_minutes: 30

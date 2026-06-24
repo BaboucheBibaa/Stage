@@ -3,7 +3,7 @@ import json
 import ollama as _ollama
 from pydantic import BaseModel
 
-from projectTypes import BaseLLMClient, LLMMessage
+from data.projectTypes import BaseLLMClient, LLMMessage
 
 
 class OllamaClient(BaseLLMClient):

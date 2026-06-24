@@ -1,7 +1,7 @@
 import threading
 import yaml
 
-from LLM.ollama_config import OllamaClient
+from AI.ollama_config import OllamaClient
 from modules.DialogueModule import DialogueModule
 from modules.BoucleProactivite import DeclenchementProactivite
 from modules.GestionSorties import GestionSorties, MessageAffichage

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from projectTypes import (
+from data.projectTypes import (
     MCT,
     MLT,
     CompagnonVirtuel,

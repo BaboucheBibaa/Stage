@@ -15,7 +15,7 @@ from data.dataclasses import (
     DonneesProfil,
     DonneesSujetSensible,
 )
-from projectTypes import (
+from data.projectTypes import (
     MCT,
     MLT,
     BaseLLMClient,
@@ -72,7 +72,7 @@ class DialogueModule:
     def chat(self, message_user: str) -> str:
         """Envoie un message et reçoit une réponse personnalisée"""
         # filtre de la mémoire court terme pertinente par rapport au message de l'utilisateur pour pas surcharger le compagnon avec de la mémoire inutile.
-        mct_pertinente = self.recup_MCT_pertinente(message_user=message_user)
+        mct_pertinente = self._recup_MCT_pertinente(message_user=message_user)
         prompt_systeme = self._build_system_prompt(mct_pertinente)
         # Ajouter le message utilisateur à l'historique (on ne lit que l'historique)
         self._historique.append(LLMMessage(role="user", contenu=message_user))
@@ -127,7 +127,7 @@ class DialogueModule:
         if not historique:
             return False
         # Création de l'enregistrement de la mémoire long terme avec les données
-        mlt_resume = self.resumer_session(self.llm, historique)
+        mlt_resume = self._resumer_session(self.llm, historique)
         mlt_id = self.data_mlt.create(
             MLT(
                 id_profil=self.id_profil,
@@ -197,7 +197,7 @@ class DialogueModule:
             print(f"Erreur lors du calcul de l'âge: {e}")
             return 0
 
-    def recup_MCT_pertinente(self, message_user: str, seuil: float = 0.6) -> list[MCT]:
+    def _recup_MCT_pertinente(self, message_user: str, seuil: float = 0.6) -> list[MCT]:
         mct_pertinente: list[MCT] = []
         doc = nlp(message_user)
         donnees_mct = self.data_mct.getToday(self.id_profil)
@@ -227,7 +227,7 @@ class DialogueModule:
         )
         return res
 
-    def resumer_session(
+    def _resumer_session(
         self, llm: BaseLLMClient, historique: list[MCT]
     ) -> ResumeMLTOutput:
         """
@@ -252,7 +252,7 @@ class DialogueModule:
         )
         return res
 
-    def format_mct(self, mct: MCT) -> str:
+    def _format_mct(self, mct: MCT) -> str:
         return f"""
         Enregistrement de la conversation actuelle avec l'utilisateur:
 
@@ -266,7 +266,7 @@ class DialogueModule:
         Tags (mots-clés) de la conversation: {mct.tags}
         """
 
-    def format_mlt(self, mlt: MLT) -> str:
+    def _format_mlt(self, mlt: MLT) -> str:
         return f"""
         Enregistrement de la mémoire long terme sur l'utilisateur:
         Date de création: {mlt.date_creation}
@@ -321,13 +321,13 @@ class DialogueModule:
 
         # MLT
         if liste_mlt:
-            contenu_mlt = "\n".join(self.format_mct(mlt) for mlt in reversed(liste_mlt))
+            contenu_mlt = "\n".join(self._format_mct(mlt) for mlt in reversed(liste_mlt))
         else:
             contenu_mlt = " Aucune mémoire long terme sauvegardée."
         # MCT
         if mct_Pertinente:
             lignes_mct = "\n".join(
-                self.format_mct(mct) for mct in reversed(mct_Pertinente)
+                self._format_mct(mct) for mct in reversed(mct_Pertinente)
             )
         else:
             lignes_mct = "  Aucun échange précédent."

@@ -9,8 +9,8 @@ from data.dataclasses import (
     DonneesPreferences,
     DonneesProfil,
 )
-from LLM.ollama_config import LLMMessage
-from projectTypes import (
+from AI.ollama_config import LLMMessage
+from data.projectTypes import (
     MCT,
     MLT,
     BaseLLMClient,

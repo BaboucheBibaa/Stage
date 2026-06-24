@@ -1,4 +1,4 @@
-from projectTypes import MCT, BaseLLMClient, LLMMessage,AnalyseHumeurOutput, MLT
+from data.projectTypes import MCT, BaseLLMClient, LLMMessage,AnalyseHumeurOutput, MLT
 from data.dataclasses import DonneesMCT, DonneesProfil, DonneesMLT
 from pathlib import Path
 from datetime import datetime
