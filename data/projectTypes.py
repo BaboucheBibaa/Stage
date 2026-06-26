@@ -46,7 +46,7 @@ class ResumeMCTOutput(BaseModel):
     Resume_Reponse: str
     Entites_Mentionnees: str
     language: str
-    tags: list[str]
+    tags: str
 
 class ResumeMLTOutput(BaseModel):
     date: datetime

@@ -575,17 +575,7 @@ class DonneesMLT:
         )
         if result:
             l = result[0]
-            return MLT(
-                id=l["ID_MLT"],
-                nombre_echanges=l["Nombre_Echanges"],
-                humeur_generale=l["Humeur_Generale"],
-                themes_abordes=l["Themes_Abordes"],
-                centres_interets=l["Centres_Interets"],
-                evenements_mentionnes=l["Evenements_Mentionnes"],
-                resume_conversation=l["Resume_Conversation"],
-                id_profil=l["ID_Profil"],
-                date_creation=l["Date_Creation"],
-            )
+            return MLT(id=l["ID_MLT"],nombre_echanges=l["Nombre_Echanges"],humeur_generale=l["Humeur_Generale"],themes_abordes=l["Themes_Abordes"],centres_interets=l["Centres_Interets"],evenements_mentionnes=l["Evenements_Mentionnes"],resume_conversation=l["Resume_Conversation"],id_profil=l["ID_Profil"],date_creation=l["Date_Creation"],)
         return None
 
 
