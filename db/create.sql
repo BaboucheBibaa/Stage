@@ -93,7 +93,3 @@ CREATE TABLE IF NOT EXISTS MCT(
     Tags VARCHAR(70),
     CONSTRAINT fk_mct_profil FOREIGN KEY (ID_Profil) REFERENCES Profil(ID_Profil) ON DELETE CASCADE
 );
-
-INSERT INTO Profil (Nom,Prenom,Date_Naissance) VALUES ('Delcroix','Lucas','2005-09-11');
-INSERT INTO Preferences (Sujet,Niveau,ID_Profil) VALUES ('Jeux vidéos',0.7,1);
-INSERT INTO Compagnon_Virtuel (Modele, Empathie, Professionalisme, Patience, Humour) VALUES ('Cristalline', 0.7, 0.8, 0.9, 0.6);
