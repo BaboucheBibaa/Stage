@@ -2,7 +2,7 @@
 
 ## 1. Présentation du projet
 
-Le projet est un compagnon virtuel conversationnel en ligne de commande, développé en Python dans le cadre d'un stage de L2. Il s'appuie sur un LLM local (Ollama) pour engager des conversations personnalisées et déclencher des messages **proactifs** à l'initiative du système, sans attendre un message de l'utilisateur.
+Le projet est un compagnon virtuel conversationnel en ligne de commande, développé en Python dans le cadre d'un stage de L2. Il se base sur un LLM local (Ollama) pour engager des conversations personnalisées et déclencher des messages **proactifs** à l'initiative du système, sans attendre un message de l'utilisateur.
 
 Le projet s'inspire de [ComPeer](https://arxiv.org/abs/2407.18064), un système de support proactif entre pairs assisté par IA, dont il reprend les principes de mémoire à deux niveaux et de proactivité pilotée par le contexte.
 
@@ -17,14 +17,15 @@ Le projet s'inspire de [ComPeer](https://arxiv.org/abs/2407.18064), un système 
 
 ## 2. Outils utilisés
 
-| Parties | Bibliothèques / Langages utilisés |
+| Parties | Bibliothèques |
 |---|---|
-| Langage | Python |
-| LLM | Ollama avec Gemma 4 31B Cloud / Qwen 14b |
-| Base de données | MariaDB |
-| Analyse sémantique | spaCy `fr_core_news_md` |
-| Sorties du LLM | Pydantic |
-| Configuration | .venv Python + YAML |
+| LLM | [Ollama](https://docs.ollama.com/) Qwen 14b / Qwen 4b |
+| Base de données | [MariaDB](https://mariadb.com/docs/connectors/mariadb-connector-python) |
+| Analyse sémantique | [spaCy](https://spacy.io/api/doc) `fr_core_news_md` |
+| Sorties du LLM | [Pydantic](https://pydantic.dev/docs/validation/latest/get-started/) |
+| Configuration | [.venv Python](https://docs.python.org/3/library/venv.html) + [YAML](https://pypi.org/project/PyYAML/) |
+
+*Le projet a été testé sur des versions cloud (gemma4:31b-cloud) pour des questions de rapidité, il est donc conseillé d'utiliser une version cloud si la machine utilisée n'est pas assez performante.*
 
 ---
 
@@ -137,13 +138,13 @@ Plutôt qu'un timing précis, le déclenchement est sur un intervalle. Pour une 
 
 ```python
 # Dépôt (thread dialogue ou thread proactif)
-router.enqueue("message", source="proactif")
+file.enqueue("message", source="proactif")
 
 # Lecture (thread affichage uniquement)
-item: MessageAffichage = router.get()   # bloquant
+item: MessageAffichage = file.get()   # bloquant
 
 # Arrêt
-router.stop()   # enfile None pour définir que la file est finie
+file.stop()   # enfile None pour définir que la file est finie
 ```
 
 Les messages proactifs sont affichés avec un séparateur visuel distinct pour ne pas se mélanger avec le prompt `Toi :` en cours de saisie.
@@ -360,7 +361,10 @@ pip install -r requirements.txt
 
 # 4. Créer le fichier .env avec les données de la BDD
 
-# 5. Lancer le compagnon
+# 5. Installer un LLM via Ollama (ici, ce sera une version cloud)
+ollama run gemma4:31b-cloud
+
+# 6. Lancer le compagnon
 python main.py
 ```
 
@@ -404,8 +408,8 @@ Tout comme un humain, le système a besoin de nettoyer sa mémoire afin de ne pa
 ### 12.6 Mise à jour dynamique de la mémoire du profil
 
 L'idée serait de laisser au LLM la possiblité de mettre à jour lui-même le profil de l'utilisateur en fonction du temps. Imaginons que l'utilisateur possède dans ses préférences "cinéma" et qu'un jour il dit au compagnon virtuel qu'il a été voir un film qu'il l'a traumatisé et qu'il n'ira plus jamais au cinéma de sa vie. L'idéal serait que le compagnon virtuel mette à jour sa mémoire sur l'utilisateur, en remettant à jour le fait qu'il n'aime plus le cinéma.
-> Cependant, cela ne laisserait-il pas trop de libertés au LLM ? Le fait qu'il puisse lui-même déterminer si un profil doit être modifié ou non ne peut-il pas conduire à des hallucinations ? Sur une donnée aussi importante que le profil utilisateur, cela doit être quelque chose à prendre en compte. De plus, est-ce que la MLT en elle-même ne consitue-elle pas déjà une sorte de profil dynamique de l'utilisateur ? Le soucis résiderait dans le fait que l'on souhaite filtrer la mémoire long terme transmise au LLM (voir 12.1), donc il faudrait filtrer la mémoire long terme à chaque message par rapport à la pertinence sémantique entre le message envoyé par l'utilisateur, mais il faut tout de même prendre les données sauvegardées par le LLM qui concerneraient le profil ? (si on change la façon dont fonctionne la mémoire long terme pour partir sur un concept de "thèmes", voir 12.1)
-Voir la [section 12.1](#121-MLT-sans-filtrage-sémantique).
+> Cependant, cela ne laisserait-il pas trop de libertés au LLM ? Le fait qu'il puisse lui-même déterminer si un profil doit être modifié ou non ne peut-il pas conduire à des hallucinations ? Sur une donnée aussi importante que le profil utilisateur, cela doit être quelque chose à prendre en compte. De plus, est-ce que la MLT en elle-même ne consitue-elle pas déjà une sorte de profil dynamique de l'utilisateur ? Le soucis résiderait dans le fait que l'on souhaite filtrer la mémoire long terme transmise au LLM (voir le [point 12.1](#121-MLT-sans-filtrage-sémantique)), donc il faudrait filtrer la mémoire long terme à chaque message par rapport à la pertinence sémantique entre le message envoyé par l'utilisateur, mais il faut tout de même prendre les données sauvegardées par le LLM qui concerneraient le profil ? (si on change la façon dont fonctionne la mémoire long terme pour partir sur un concept de "thèmes", voir le [point 12.1](#121-MLT-sans-filtrage-sémantique).)
+
 
 ### 12. Annulation d'évènements
 
