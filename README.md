@@ -1,4 +1,4 @@
-# Documentation Technique — Compagnon Virtuel Proactif
+# Documentation Technique - Compagnon Virtuel Proactif
 
 ## 1. Présentation du projet
 
@@ -104,9 +104,9 @@ Règles de notification définies en tant que constantes au sein du fichier `Eve
 
 | Type | Notifications planifiées |
 |---|---|
-| `rendez-vous` | −1h (rappel avant), +1h (suivi après) |
-| `examen` | −13h (veille), −1h (jour J), +2h (suivi) |
-| `deadline` | −24h, −2h |
+| `rendez-vous` | -1h (rappel avant), +1h (suivi après) |
+| `examen` | -13h (veille), -1h (jour J), +2h (suivi) |
+| `deadline` | -24h, -2h |
 | `maladie` | +2h |
 | `bien-etre` | +1h |
 
@@ -120,7 +120,7 @@ Plutôt qu'un timing précis, le déclenchement est sur un intervalle. Pour une 
 
 **Rôle** : thread de fond qui exécute `EventModule.verifier_et_declencher()` toutes les N minutes (configurable, par défaut : 1 minute). Cette boucle peut idéalement servir à lancer toutes les potentielles vérifications proactives nécessaires dans la vie du projet.
 
-**Arrêt** : `threading.Event` — `stop()` pose le flag, `_boucle()` sort dès que le flag est levé.
+**Arrêt** : `threading.Event`: `stop()` pose le flag, `_boucle()` sort dès que le flag est levé.
 
 ---
 
@@ -184,7 +184,7 @@ Le fichier `data.dataclasses.py` contient toutes les classes qui elles mêmes co
 
 ## 6. Modèles de données `data.projectTypes.py`
 
-### 6.1 Types LLM — sorties structurées (héritage via `BaseModel`)
+### 6.1 Types LLM - sorties structurées (héritage via `BaseModel`)
 
 Ces modèles définissent le schéma JSON attendu en sortie du LLM via `format=output_model`.
 `output_model` définit un objet qui hérite de `BaseModel` afin de pouvoir utiliser les fonctionnalités de la bibliothèque Pydantic afin de valider le modèle de données.
@@ -318,14 +318,14 @@ Tous les prompts sont dans `prompts/` et chargés via `Path.read_text()`. Les va
 | Fichier | Rôle |
 |---|---|
 | `system_prompt.txt` | Identité du compagnon, traits de personnalité, préférences, sujets sensibles, MCT, MLT, consignes d'utilisation de la mémoire |
-| `event_detector.txt` | Détection d'événement — critères stricts, exemples positifs et négatifs, format JSON attendu |
+| `event_detector.txt` | Détection d'événement - critères stricts, exemples positifs et négatifs, format JSON attendu |
 | `mct/mct_resume_system.txt` | Résumé structuré d'un échange pour la MCT |
 | `mlt/mlt_resume_system.txt` | Résumé de session pour la MLT (3ème personne, 3–5 phrases) |
 | `proactive/event_system.txt` | Prompt système pour les messages proactifs événementiels |
-| `proactive/event_user_avant.txt` | Prompt utilisateur — rappel avant un événement |
-| `proactive/event_user_après.txt` | Prompt utilisateur — suivi après un événement |
+| `proactive/event_user_avant.txt` | Prompt utilisateur - rappel avant un événement |
+| `proactive/event_user_après.txt` | Prompt utilisateur - suivi après un événement |
 | `initiative/analyse_humeur_system.txt` | Analyse émotionnelle de la MCT (stress, envie d'interagir, confiance) |
-| `initiative/prompt_initiative_system.txt` | Prise d'initiative — extraction d'un sujet MLT pour relancer la conversation |
+| `initiative/prompt_initiative_system.txt` | Prise d'initiative - extraction d'un sujet MLT pour relancer la conversation |
 
 ---
 
@@ -429,4 +429,3 @@ Si l'utilisateur dit au compagnon virtuel qu'un message proactif en particulier 
 Actuellement, le système de détection d'évènements est fonctionnel et hallucine très très peu. Cependant, il n'y a pas la possibilité de dire à notre compagnon virtuel si on annule un évènement qui est prévu ou non. Par exemple, si je lui dis que j'ai un examen à 16h mais qu'au final il est annulé, ce serait peu réaliste qu'il envoie tout de même le message proactif pour prévenir de l'examen.
 
 > Solution : La solution m'a l'air complexe à implémenter, il faudrait que le LLM puisse lui-même détecter le fait que l'utilisateur annule un évènement prévu. Cela laisse une grande part à l'hallucination. Mais une piste serait déjà de faire une analyse sémantique entre le message de l'utilisateur et chaque contexte d'évènement sauvegardé.
-
