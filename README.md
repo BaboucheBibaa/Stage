@@ -398,37 +398,35 @@ Actuellement, cette fonctionnalité n'est pas du tout intégrée au projet. Cela
 
 Le concept de graphe de mémoire est abordé notamment dans le cas de Mem0, un système de mémoire utilisable notamment dans des agents conversationnels avec un système de mémoire long terme. Concrètement, on utiliserait des graphes afin d'associer des entitées (sommets du graphes) entre eux, via des associations (arêtes du graphe), afin d'avoir des connexions entre entités, par exemple: Utilisateur A (sommet du graphe) aime se promener (arête du graphe) avec son chien (sommet du graphe). Ce système est beaucoup plus pertinent qu'une mémoire relationnelle telle qu'elle est implémentée actuellement car beaucoup plus humaine et les possibilités sont beaucoup plus importantes.
 
-> De plus, il faudrait aussi pouvoir hiérarchiser les données entre elles, par exemple, je peux aimer la musique et l'escalade, mais je peux préférer l'escalade, il faut pouvoir prendre cette hiérarchie en compte.
+> De plus, il faudrait aussi pouvoir hiérarchiser les données entre elles, par exemple, je peux aimer la musique et l'escalade, mais je peux préférer l'escalade, il faut pouvoir prendre cette hiérarchie en compte. Se renseigner sur l'implémentation de Neo4J, qui semble être la solution à la bonne échelle pour cela, mais nécessite de préparer un serveur pour cela. Certains modèles de graphes de connaissances ne proposent pas par eux-mêmes une solution persistante. Neo4J et Kuzu semblent être des options intéressantes, les autres options ne proposent pas de persistance des données. Cependant, Kuzu propose d'embarquer directement le graphe de données au sein de la machine, donc à moins d'avoir un serveur à part pour héberger une base de données Neo4J, Kuzu semble être bien.
 
 ### 12.5 Nettoyage de la mémoire
 
 Tout comme un humain, le système a besoin de nettoyer sa mémoire afin de ne pas garder des informations en double ou des informations inutiles (comme les habitudes détectées et non utilisées si la solution d'habitude est implémentée comme elle est décrite au dessus). Le système de nettoyage de la mémoire permettrait aussi de regrouper les éléments de la mémoire long terme entre eux. Actuellement, c'est complexe a implémenter avec le système de mémoire long terme qui n'est pas basée sur des thèmes (voir la solution en 12.1), étant donné que la mémoire long terme n'est pas organisée. Mais avec une mémoire long terme basée sur les thèmes, cela peut s'implémenter en détectant des choses redondantes et en les fusionnant entre elles. Avec une mémoire sous forme de graphes, cela semble pouvoir se faire en fusionnant des sommets entre eux.
+> Solution : Implémenter une logique de session. Comme dit sur le [point 7.1](#71-mémoire-court-terme-mct), une session actuelle correspond au cycle de vie du programme, donc durant le temps de son exécution. Dans le cadre d'un projet de grande envergure, le cerveau du système tournerait en permanence, en journée afin de pouvoir être un agent conversationnel, et le soir afin de pouvoir être un agent d'organisation de mémoire, afin de restructurer la mémoire de façon cohérente et exploitable. Une journée = un cycle de MCT, une fois que la journée est finie, on restructure la MCT de sorte à avoir une MLT (peu importe la forme, que ce soit géré par thèmes via une BD ou par graphe de connaissances)
 
 ### 12.6 Mise à jour dynamique de la mémoire du profil
 
 L'idée serait de laisser au LLM la possiblité de mettre à jour lui-même le profil de l'utilisateur en fonction du temps. Imaginons que l'utilisateur possède dans ses préférences "cinéma" et qu'un jour il dit au compagnon virtuel qu'il a été voir un film qu'il l'a traumatisé et qu'il n'ira plus jamais au cinéma de sa vie. L'idéal serait que le compagnon virtuel mette à jour sa mémoire sur l'utilisateur, en remettant à jour le fait qu'il n'aime plus le cinéma.
 > Cependant, cela ne laisserait-il pas trop de libertés au LLM ? Le fait qu'il puisse lui-même déterminer si un profil doit être modifié ou non ne peut-il pas conduire à des hallucinations ? Sur une donnée aussi importante que le profil utilisateur, cela doit être quelque chose à prendre en compte. De plus, est-ce que la MLT en elle-même ne consitue-elle pas déjà une sorte de profil dynamique de l'utilisateur ? Le soucis résiderait dans le fait que l'on souhaite filtrer la mémoire long terme transmise au LLM (voir le [point 12.1](#121-MLT-sans-filtrage-sémantique)), donc il faudrait filtrer la mémoire long terme à chaque message par rapport à la pertinence sémantique entre le message envoyé par l'utilisateur, mais il faut tout de même prendre les données sauvegardées par le LLM qui concerneraient le profil ? (si on change la façon dont fonctionne la mémoire long terme pour partir sur un concept de "thèmes", voir le [point 12.1](#121-MLT-sans-filtrage-sémantique).)
 
-
-### 12. Annulation d'évènements
-
-Actuellement, le système de détection d'évènements est fonctionnel et hallucine très très peu. Cependant, il n'y a pas la possibilité de dire à notre compagnon virtuel si on annule un évènement qui est prévu ou non. Par exemple, si je lui dis que j'ai un examen à 16h mais qu'au final il est annulé, ce serait peu réaliste qu'il envoie tout de même le message proactif pour prévenir de l'examen.
-
-> Solution : La solution m'a l'air complexe à implémenter, il faudrait que le LLM puisse lui-même détecter le fait que l'utilisateur annule un évènement prévu. Cela laisse une grande part à l'hallucination. Mais une piste serait déjà de faire une analyse sémantique entre le message de l'utilisateur et chaque contexte d'évènement sauvegardé.
-
-
-
-### 12.7 Concevoir un dataset
-
-Dans le cadre d'un LLM, on parle même de **golden dataset**, il s'agit d'un jeu de données conçu par l'humain afin de tester nous-même la fiabilité du LLM. L'idée serait donc de concevoir cela pour chacune des phases où un appel LLM est requis (sauvegarde en MCT / MLT, détection d'évènement, prise d'initiative) afin de vérifier la fiabilité du modèle. L'intérêt de ce dataset est de vérifier que, si on décide de changer de modèle (pour une version locale, par exemple), on puisse appliquer des tests sur ce modèle pour vérifier sa fiabilité.
-
-### 12.8 Renforcer la personnalité du LLM
+### 12.7 Renforcer la personnalité du LLM
 
 Actuellement, la façon dont la personnalité du LLM est gérée se base uniquement sur 4 émotions, c'est peu, mais cela permet de tester sa façon de changer de ton par rapport au degré qu'on attribue à une émotion particulière. Afin de rendre cela plus cohérent, il faudrait idéalement réutiliser le système de préférences et de sujets sensibles, tout comme un humain (l'objectif ici est de modéliser un compagnon virtuel étant le plus humain possible)
+
+### 12.8 Concevoir un dataset
+
+Dans le cadre d'un LLM, on parle même de **golden dataset**, il s'agit d'un jeu de données conçu par l'humain afin de tester nous-même la fiabilité du LLM. L'idée serait donc de concevoir cela pour chacune des phases où un appel LLM est requis (sauvegarde en MCT / MLT, détection d'évènement, prise d'initiative) afin de vérifier la fiabilité du modèle. L'intérêt de ce dataset est de vérifier que, si on décide de changer de modèle (pour une version locale, par exemple), on puisse appliquer des tests sur ce modèle pour vérifier sa fiabilité.
 
 ### 12.9 Prise en compte du feedback utilisateur dans le cas des actions proactives
 
 Si l'utilisateur dit au compagnon virtuel qu'un message proactif en particulier (que ce soit une prise d'initiative ou un rappel d'évènement) n'était pas pertinent sur un moment donné, l'idée serait que le compagnon puisse lui même se "restreindre" afin de proposer uniquement des messages qui pourraient être pertinents pour l'utilisateur.
 
 > Solution proposée : Dans le cas de la détection d'évènements, si le LLM fait des rappels sur des évènements pas pertinents, il faudrait augmenter le seuil d'importance nécessaire au sein de la détection d'évènement. Lors d'une prise d'initiative, cette même idée pourrait être utilisée.
+
+### 12.10 Annulation d'évènements
+
+Actuellement, le système de détection d'évènements est fonctionnel et hallucine très très peu. Cependant, il n'y a pas la possibilité de dire à notre compagnon virtuel si on annule un évènement qui est prévu ou non. Par exemple, si je lui dis que j'ai un examen à 16h mais qu'au final il est annulé, ce serait peu réaliste qu'il envoie tout de même le message proactif pour prévenir de l'examen.
+
+> Solution : La solution m'a l'air complexe à implémenter, il faudrait que le LLM puisse lui-même détecter le fait que l'utilisateur annule un évènement prévu. Cela laisse une grande part à l'hallucination. Mais une piste serait déjà de faire une analyse sémantique entre le message de l'utilisateur et chaque contexte d'évènement sauvegardé.
 
