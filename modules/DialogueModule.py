@@ -321,7 +321,7 @@ class DialogueModule:
 
         # MLT
         if liste_mlt:
-            contenu_mlt = "\n".join(self._format_mct(mlt) for mlt in reversed(liste_mlt))
+            contenu_mlt = "\n".join(self._format_mlt(mlt) for mlt in reversed(liste_mlt))
         else:
             contenu_mlt = " Aucune mémoire long terme sauvegardée."
         # MCT

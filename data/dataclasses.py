@@ -558,20 +558,7 @@ class DonneesMLT:
             "SELECT * FROM MLT WHERE ID_Profil = ?", (id_profil,)
         )
         if result:
-            return
-        [
-            MLT(
-                nombre_echanges=l["Nombre_Echanges"],
-                humeur_generale=l["Humeur_Generale"],
-                themes_abordes=l["Themes_Abordes"],
-                centres_interets=l["Centres_Interets"],
-                evenements_mentionnes=l["Evenements_Mentionnes"],
-                resume_conversation=l["Resume_Conversation"],
-                id_profil=l["ID_Profil"],
-                date_creation=l["Date_Creation"],
-            )
-            for l in result
-        ]
+            return [MLT(nombre_echanges=l["Nombre_Echanges"],humeur_generale=l["Humeur_Generale"],themes_abordes=l["Themes_Abordes"],centres_interets=l["Centres_Interets"],evenements_mentionnes=l["Evenements_Mentionnes"],resume_conversation=l["Resume_Conversation"],id_profil=l["ID_Profil"],date_creation=l["Date_Creation"]) for l in result]
 
     def getRecente(self, id_profil: int) -> MLT | None:
         """Récupère la MLT la plus récente d'un profil
