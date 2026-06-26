@@ -55,20 +55,12 @@ def _charger_prompt(nom: str) -> str:
 
 
 class EventModule:
-    def __init__(
-        self,
-        llm: BaseLLMClient,
-        id_profil: int,
-        evt_repo: DonneesEvenement,
-        intervalle_minutes: int = 5,
-        fenetre_minutes: int = 30,
-    ):
+    def __init__(self,llm: BaseLLMClient,id_profil: int,intervalle_minutes: int = 1,fenetre_minutes: int = 30):
         self._db = Database()
         self.llm = llm
         self.id_profil = id_profil
         self.intervalle_minutes = intervalle_minutes
         self.fenetre_minutes = fenetre_minutes
-        self.evt_repo = evt_repo
         self._data_evt = DonneesEvenement(db=self._db)
 
     def detecter(self, message_user: str) -> None:
@@ -115,7 +107,7 @@ class EventModule:
                 type_evenement=llm_reponse.type.value,
                 importance=importance,
             )
-            self.evt_repo.create(evenement_detecte)
+            self._data_evt.create(evenement_detecte)
 
     def verifier_et_declencher(self) -> list[str]:
         """
