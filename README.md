@@ -13,6 +13,8 @@ Le projet s'inspire de [ComPeer](https://arxiv.org/abs/2407.18064), un système 
 - Système mémoire à deux niveaux (MCT / MLT) avec filtrage sémantique sur la MCT
 - Analyse d'humeur et module d'initiative conversationnelle (non intégré au thread proactif)
 
+Le projet tel qu'il est actuellement s'utilise majoritairement dans un contexte d'assistant proactif avec mémoire qui déclenche des messages proactifs basés sur des évènements purement temporels, comme un examen, un évènement. L'idée à terme serait de déclencher des messages proactifs via une prise d'initiative ou encore par détection d'une chose habituelle manquante.
+
 ---
 
 ## 2. Outils utilisés
@@ -414,17 +416,22 @@ L'idée serait de laisser au LLM la possiblité de mettre à jour lui-même le p
 
 Actuellement, la façon dont la personnalité du LLM est gérée se base uniquement sur 4 émotions, c'est peu, mais cela permet de tester sa façon de changer de ton par rapport au degré qu'on attribue à une émotion particulière. Afin de rendre cela plus cohérent, il faudrait idéalement réutiliser le système de préférences et de sujets sensibles, tout comme un humain (l'objectif ici est de modéliser un compagnon virtuel étant le plus humain possible)
 
-### 12.8 Concevoir un dataset
+### 12.8 Utiliser différents LLM pour différents cas
+
+L'intérêt de laisser la possibilité au développeur d'utiliser n'importe quel type de LLM via Ollama est surtout de faire la distinction entre modèle cloud et modèle local. L'idée est derrière purmeent éthique : Quelles informations sur l'utilisateur doit-on transmettre à des centres de données, qui pourront la réutiliser, et quelles informations doit-on garder en local ? Il faut prendre cet aspect en compte dans l'avancée de la conception du projet.
+
+
+### 12.9 Concevoir un dataset
 
 Dans le cadre d'un LLM, on parle même de **golden dataset**, il s'agit d'un jeu de données conçu par l'humain afin de tester nous-même la fiabilité du LLM. L'idée serait donc de concevoir cela pour chacune des phases où un appel LLM est requis (sauvegarde en MCT / MLT, détection d'évènement, prise d'initiative) afin de vérifier la fiabilité du modèle. L'intérêt de ce dataset est de vérifier que, si on décide de changer de modèle (pour une version locale, par exemple), on puisse appliquer des tests sur ce modèle pour vérifier sa fiabilité.
 
-### 12.9 Prise en compte du feedback utilisateur dans le cas des actions proactives
+### 12.10 Prise en compte du feedback utilisateur dans le cas des actions proactives
 
 Si l'utilisateur dit au compagnon virtuel qu'un message proactif en particulier (que ce soit une prise d'initiative ou un rappel d'évènement) n'était pas pertinent sur un moment donné, l'idée serait que le compagnon puisse lui même se "restreindre" afin de proposer uniquement des messages qui pourraient être pertinents pour l'utilisateur.
 
 > Solution proposée : Dans le cas de la détection d'évènements, si le LLM fait des rappels sur des évènements pas pertinents, il faudrait augmenter le seuil d'importance nécessaire au sein de la détection d'évènement. Lors d'une prise d'initiative, cette même idée pourrait être utilisée.
 
-### 12.10 Annulation d'évènements
+### 12.11 Annulation d'évènements
 
 Actuellement, le système de détection d'évènements est fonctionnel et hallucine très très peu. Cependant, il n'y a pas la possibilité de dire à notre compagnon virtuel si on annule un évènement qui est prévu ou non. Par exemple, si je lui dis que j'ai un examen à 16h mais qu'au final il est annulé, ce serait peu réaliste qu'il envoie tout de même le message proactif pour prévenir de l'examen.
 
