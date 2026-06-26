@@ -286,7 +286,7 @@ Pour chaque événement validé, **une entrée `Evenement` est créée par notif
 
 ### 8.2 Déclenchement (via un thread proactif)
 
-Toutes les N minutes, `DeclenchementProactivite` appelle `verifier_et_declencher()`. Pour chaque événement en statut `Planifié` avec `Importance >= 0.3`, la méthode évalue si `datetime.now()` tombe dans la fenêtre de notification :
+Toutes les N minutes, `DeclenchementProactivite` appelle `verifier_et_declencher()`. Pour chaque événement en statut `Planifié` avec `Importance ≥ 0.3`, la méthode évalue si `datetime.now()` tombe dans la fenêtre de notification :
 
 ```
 Notification "avant" :
@@ -313,7 +313,7 @@ Le message est ensuite enfilé dans `GestionSorties` avec `source="proactif"` po
 
 ## 9. Prompts
 
-Tous les prompts sont externalisés dans `prompts/` et chargés via `Path.read_text()`. Les variables sont injectées par `.format(**contexte)`.
+Tous les prompts sont dans `prompts/` et chargés via `Path.read_text()`. Les variables sont injectées par `.format(**contexte)`.
 
 | Fichier | Rôle |
 |---|---|
@@ -331,19 +331,9 @@ Tous les prompts sont externalisés dans `prompts/` et chargés via `Path.read_t
 
 ## 10. Configuration
 
-**`config.yaml`**
-```yaml
-llm:
-  model: gemma4:31b-cloud
-  temperature: 0.7
-  max_tokens: 512
+Données du LLM modifiables directement dans `config.yaml`
 
-companion:
-  name: "Apagnan"
-  proactive_interval_minutes: 60
-```
-
-**`.env`** (non versionné)
+**`.env`**
 ```
 BD_USER=...
 BD_MDP=...
@@ -356,47 +346,48 @@ BD_PORT=...
 
 ## 11. Installation et lancement
 
-**Prérequis** : Python 3.12, Ollama installé et actif, MariaDB configuré.
+**Prérequis** : Python 3.12, Ollama installé et actif, une base de données MariaDB configurée.
 
-```bash
-# 1. Installer les dépendances
+```powershell
+# 1. Créer un environnement virtuel
+python -m venv .venv
+
+# 2. Activer l'environnement virtuel
+.venv/Scripts/activate.ps1
+
+# 3. Installer les bibliothèques requises
 pip install -r requirements.txt
 
-# 2. Initialiser la base de données
-mariadb -u root -p < db/create.sql
+# 4. Créer le fichier .env avec les données de la BDD
 
-# 3. Créer le fichier .env avec les credentials BDD
-
-# 4. Lancer le compagnon
+# 5. Lancer le compagnon
 python main.py
 ```
 
 ---
 
-## 12. Limitations connues et perspectives
+## 12. Manquements connus et perspectives d'amélioration
 
-| # | Limitation | Impact | Piste d'amélioration |
-|---|---|---|---|
-| 6 | **Pas d'annulation d'événements** | Un événement annulé par l'utilisateur reste planifié en BDD | Détection LLM d'intention d'annulation → `updateEvent("Annulé")` |
+Tous les points suivants sont rangés par importance, du plus important, à implémenter en priorité, au moins important.
 
 ### 12.1 MLT sans filtrage sémantique
 
 Le contexte envoyé au LLM grossit au fil du temps sans avoir de filtrage intégré. Concrètement, le LLM reçoit des évènements qu'il n'est pas pertinent pour lui d'avoir en mémoire lors de la génération de la réponse.
 
-> Solution proposée : Refactoriser la mémoire long terme. L'idée serait, au lieu de regrouper la mémoire long terme en différents attributs comme actuellement, comme l'humeur actuelle, on regroupe tout sous forme de grands thèmes, comme un thème "Sports", un thème "Musique", un thème "Emotions" etc... Cela permettrait d'avoir une sorte de classification intégrée au sein de notre mémoire. On peut voir cela comme un classeur, avec un compartiment pour une catégorie spécifique. Toute la difficulté résiderait donc dans le fait d'établir des catégories suffisament larges afin de minimiser les erreurs de la part du LLM, afin que tout soit stocké à la bonne place. 
+> Solution proposée : Refactoriser la mémoire long terme. L'idée serait, au lieu de regrouper la mémoire long terme en différents attributs comme actuellement, comme l'humeur actuelle, on regroupe tout sous forme de grands thèmes, comme un thème "Sports", un thème "Musique", un thème "Emotions" etc... Cela permettrait d'avoir une sorte de classification intégrée au sein de notre mémoire. On peut voir cela comme un classeur, avec un compartiment pour une catégorie spécifique. Toute la difficulté résiderait donc dans le fait d'établir des catégories suffisament larges (ou, à l'inverse, des catégories suffisament précises) afin de minimiser les erreurs de la part du LLM, afin que tout soit stocké à la bonne place. Un bon début serait éventuellement d'utiliser les tags (mots clés) actuellement présents dans la MLT afin de les restreindre et de proposer une table à part dans la base de données pour chacun de ces tags (donc les tags seraient uniquement des tags connus et définis)
 
 ### 12.2 `ModuleInitiative` non intégré au système actuel.
 
-Le LLM ne peut pas prendre d'initiative et relancer une conversation actuellement. Cependant, la fonctionnalité est en partie implémentée (de façon simple) dans `ModuleInitiative.py` en déterminant si l'utilisateur a envie d'interaction et si l'analyse du LLM est fiable ou non. 
-Cependant, le système est encore fragile car, tel qu'il est fait actuellement, il est très probable que le LLM relance une conversation à chaque fois que le thread va s'exécuter (les critères sur l'envie d'interaction de l'utilisateur et la fiabilité du message sont trop peu restrictifs).
+**Problème 1 :** Le LLM ne peut pas prendre d'initiative et relancer une conversation actuellement. Cependant, la fonctionnalité est en partie implémentée (de façon simple) dans `ModuleInitiative.py` en déterminant si l'utilisateur a envie d'interaction et si l'analyse du LLM est fiable ou non.<br>
+**Problème 2 :** Le système est encore fragile car, tel qu'il est fait actuellement, il est très probable que le LLM relance une conversation à chaque fois que le thread va s'exécuter (les critères sur l'envie d'interaction de l'utilisateur et la fiabilité du message sont trop peu restrictifs).
 De plus, le LLM peut relancer indéfiniment sur un sujet et il n'ajuste jamais l'importance d'un sujet.
 
 
->**Solution 1** : Il faudrait aussi intégrer un concept de valeur d'importance sur chaque évènement que le LLM va sélectionner pour faire une prise d'initiative. Par exemple, pour un projet qui est en cours, la valeur d'importance doit être élevée et le LLM peut être en mesure de faire des relances plus souvent. Par contre, pour un projet qui est fini, on doit pouvoir avoir mettre une valeur d'importance nulle, afin que le LLM ne relance plus jamais sur ce projet. Mais il ne faut pas non plus supprimer ce projet de la mémoire, il faut toujours l'avoir en tête afin que le LLM puisse toujours savoir que l'utilisateur a fait un projet.<br>**Solution 2**: Intégrer davantage de critères de prise d'initiative, notamment une durée depuis le dernier message, afin de ne pas avoir le soucis de prise d'initiative à chaque exécution du thread.
+>**Solution 1**: Intégrer davantage de critères de prise d'initiative, notamment une durée depuis le dernier message, afin de ne pas avoir le soucis de prise d'initiative à chaque exécution du thread.<br>**Solution 2** : Il faudrait aussi intégrer un concept de valeur d'importance sur chaque évènement que le LLM va sélectionner pour faire une prise d'initiative. Par exemple, pour un projet qui est en cours, la valeur d'importance doit être élevée et le LLM peut être en mesure de faire des relances plus souvent. Par contre, pour un projet qui est fini, on doit pouvoir avoir mettre une valeur d'importance nulle, afin que le LLM ne relance plus jamais sur ce projet. Mais il ne faut pas non plus supprimer ce projet de la mémoire, il faut toujours l'avoir en tête afin que le LLM puisse toujours savoir que l'utilisateur a fait un projet.
 
 ### 12.3 Proactivité basée sur l'habitude
 
-Actuellement, cette fonctionnalité n'est pas du tout intégrée au projet. Cela consisterait à intégrer une détection d'habitudes au sein du projet, par exemple "promener le chien dehors" avec une heure "9 heures", et éventuellement un jour, "lundi". Cela sous-entendrait que l'utilisateur promène son chien tous les lundis à 9h. Le système devrait donc tourner toutes les N heures afin de déterminer si l'habitude a été détectée. Il faudrait analyser la conversation actuelle (donc la MCT) afin de déterminer si, à une heure précise, l'habitude a été détectée ou non.
+Actuellement, cette fonctionnalité n'est pas du tout intégrée au projet. Cela consisterait à intégrer une détection d'habitudes au sein du projet, par exemple "promener le chien dehors" avec une heure "9 heures", et éventuellement un jour, "lundi". Cela sous-entendrait que l'utilisateur promène son chien tous les lundis à 9h. Le système devrait donc tourner toutes les N heures (ou minutes) afin de déterminer si l'habitude a été détectée. Il faudrait analyser la conversation actuelle (donc la MCT) afin de déterminer si, à une heure précise, l'habitude a été détectée ou non.
 
 > Solution proposée: Intégrer une table "Habitude", qui permettrait de stocker une habitude. Tout l'enjeu serait de déterminer comment stocker une habitude sans pour autant exagérer sur l'ajout de l'habitude en mémoire. Concrètement, une idée proposée actuellement serait de laisser le LLM ajouter ce qu'il souhaite comme habitude qu'il détermine, le tout avec une valeur d'importance de cette habitude. Cette valeur augmenterait ou descendrait en fonction de si elle cette habitude est répétée ou non à la date indiquée dans l'enregistrement de la base. Cependant, cette solution engendrerait énormément de données non utilisées au sein de la BD. Il faudrait donc intégrer un système de nettoyage de la mémoire derrière. Ce système s'exécuterait à chaque fin de conversation. Le concept est abordé plus en détails plus bas.
 
@@ -406,12 +397,35 @@ Le concept de graphe de mémoire est abordé notamment dans le cas de Mem0, un s
 
 > De plus, il faudrait aussi pouvoir hiérarchiser les données entre elles, par exemple, je peux aimer la musique et l'escalade, mais je peux préférer l'escalade, il faut pouvoir prendre cette hiérarchie en compte.
 
-### 12.5 Annulation d'évènements
+### 12.5 Nettoyage de la mémoire
+
+Tout comme un humain, le système a besoin de nettoyer sa mémoire afin de ne pas garder des informations en double ou des informations inutiles (comme les habitudes détectées et non utilisées si la solution d'habitude est implémentée comme elle est décrite au dessus). Le système de nettoyage de la mémoire permettrait aussi de regrouper les éléments de la mémoire long terme entre eux. Actuellement, c'est complexe a implémenter avec le système de mémoire long terme qui n'est pas basée sur des thèmes (voir la solution en 12.1), étant donné que la mémoire long terme n'est pas organisée. Mais avec une mémoire long terme basée sur les thèmes, cela peut s'implémenter en détectant des choses redondantes et en les fusionnant entre elles. Avec une mémoire sous forme de graphes, cela semble pouvoir se faire en fusionnant des sommets entre eux.
+
+### 12.6 Mise à jour dynamique de la mémoire du profil
+
+L'idée serait de laisser au LLM la possiblité de mettre à jour lui-même le profil de l'utilisateur en fonction du temps. Imaginons que l'utilisateur possède dans ses préférences "cinéma" et qu'un jour il dit au compagnon virtuel qu'il a été voir un film qu'il l'a traumatisé et qu'il n'ira plus jamais au cinéma de sa vie. L'idéal serait que le compagnon virtuel mette à jour sa mémoire sur l'utilisateur, en remettant à jour le fait qu'il n'aime plus le cinéma.
+> Cependant, cela ne laisserait-il pas trop de libertés au LLM ? Le fait qu'il puisse lui-même déterminer si un profil doit être modifié ou non ne peut-il pas conduire à des hallucinations ? Sur une donnée aussi importante que le profil utilisateur, cela doit être quelque chose à prendre en compte. De plus, est-ce que la MLT en elle-même ne consitue-elle pas déjà une sorte de profil dynamique de l'utilisateur ? Le soucis résiderait dans le fait que l'on souhaite filtrer la mémoire long terme transmise au LLM (voir 12.1), donc il faudrait filtrer la mémoire long terme à chaque message par rapport à la pertinence sémantique entre le message envoyé par l'utilisateur, mais il faut tout de même prendre les données sauvegardées par le LLM qui concerneraient le profil ? (si on change la façon dont fonctionne la mémoire long terme pour partir sur un concept de "thèmes", voir 12.1)
+Voir la [section 12.1](#121-MLT-sans-filtrage-sémantique).
+
+### 12. Annulation d'évènements
 
 Actuellement, le système de détection d'évènements est fonctionnel et hallucine très très peu. Cependant, il n'y a pas la possibilité de dire à notre compagnon virtuel si on annule un évènement qui est prévu ou non. Par exemple, si je lui dis que j'ai un examen à 16h mais qu'au final il est annulé, ce serait peu réaliste qu'il envoie tout de même le message proactif pour prévenir de l'examen.
 
 > Solution : La solution m'a l'air complexe à implémenter, il faudrait que le LLM puisse lui-même détecter le fait que l'utilisateur annule un évènement prévu. Cela laisse une grande part à l'hallucination. Mais une piste serait déjà de faire une analyse sémantique entre le message de l'utilisateur et chaque contexte d'évènement sauvegardé.
 
-### 12.6 Nettoyage de la mémoire
 
-Tout comme un humain, le système a besoin de nettoyer sa mémoire afin de ne pas garder des informations en double ou des informations inutiles (comme les habitudes détectées et non utilisées si la solution d'habitude est implémentée comme elle est décrite au dessus). Le système de nettoyage de la mémoire permettrait aussi de regrouper les éléments de la mémoire long terme entre eux. Actuellement, c'est complexe a implémenter avec le système de mémoire long terme qui n'est pas basée sur des thèmes (voir la solution en 12.1) mais avec une mémoire long terme basée sur les thèmes, cela peut s'implémenter. Avec une mémoire sous forme de graphes, cela semble pouvoir se faire en fusionnant des sommets entre eux.
+
+### 12.7 Concevoir un dataset
+
+Dans le cadre d'un LLM, on parle même de **golden dataset**, il s'agit d'un jeu de données conçu par l'humain afin de tester nous-même la fiabilité du LLM. L'idée serait donc de concevoir cela pour chacune des phases où un appel LLM est requis (sauvegarde en MCT / MLT, détection d'évènement, prise d'initiative) afin de vérifier la fiabilité du modèle. L'intérêt de ce dataset est de vérifier que, si on décide de changer de modèle (pour une version locale, par exemple), on puisse appliquer des tests sur ce modèle pour vérifier sa fiabilité.
+
+### 12.8 Renforcer la personnalité du LLM
+
+Actuellement, la façon dont la personnalité du LLM est gérée se base uniquement sur 4 émotions, c'est peu, mais cela permet de tester sa façon de changer de ton par rapport au degré qu'on attribue à une émotion particulière. Afin de rendre cela plus cohérent, il faudrait idéalement réutiliser le système de préférences et de sujets sensibles, tout comme un humain (l'objectif ici est de modéliser un compagnon virtuel étant le plus humain possible)
+
+### 12.9 Prise en compte du feedback utilisateur dans le cas des actions proactives
+
+Si l'utilisateur dit au compagnon virtuel qu'un message proactif en particulier (que ce soit une prise d'initiative ou un rappel d'évènement) n'était pas pertinent sur un moment donné, l'idée serait que le compagnon puisse lui même se "restreindre" afin de proposer uniquement des messages qui pourraient être pertinents pour l'utilisateur.
+
+> Solution proposée : Dans le cas de la détection d'évènements, si le LLM fait des rappels sur des évènements pas pertinents, il faudrait augmenter le seuil d'importance nécessaire au sein de la détection d'évènement. Lors d'une prise d'initiative, cette même idée pourrait être utilisée.
+
