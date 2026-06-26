@@ -87,7 +87,7 @@ main.py
 
 ---
 
-### 5.2 `EventModule`
+### 4.2 `EventModule`
 
 **Rôle** : détection d'événements dans les messages utilisateur via un appel LLM structuré, et déclenchement des messages proactifs associés.
 
@@ -116,15 +116,15 @@ Plutôt qu'un timing précis, le déclenchement est sur un intervalle. Pour une 
 
 ---
 
-### 5.3 `BoucleProactivite` (`DeclenchementProactivite`)
+### 4.3 `BoucleProactivite` (`DeclenchementProactivite`)
 
-**Rôle** : thread de fond qui exécute `EventModule.verifier_et_declencher()` toutes les N minutes (configurable, défaut `config.yaml` : 60 minutes).
+**Rôle** : thread de fond qui exécute `EventModule.verifier_et_declencher()` toutes les N minutes (configurable, par défaut : 1 minute). Cette boucle peut idéalement servir à lancer toutes les potentielles vérifications proactives nécessaires dans la vie du projet.
 
 **Arrêt** : `threading.Event` — `stop()` pose le flag, `_boucle()` sort dès que le flag est levé.
 
 ---
 
-### 5.4 `ModuleInitiative`
+### 4.4 `ModuleInitiative`
 
 **Rôle** : analyse l'humeur de l'utilisateur à partir de la MCT du jour (`AnalyseHumeurOutput`), puis génère un message d'initiative basé sur la MLT si les conditions sont réunies (`confiance > 0.7` et `envie_interagir >= 0.6`).
 
@@ -132,7 +132,7 @@ Plutôt qu'un timing précis, le déclenchement est sur un intervalle. Pour une 
 
 ---
 
-### 5.5 `GestionSorties`
+### 4.5 `GestionSorties`
 
 **Rôle** : intègre une `queue.Queue` pour gérer tous les affichages qui arrivent depuis des threads distincts.
 
@@ -149,28 +149,21 @@ file.stop()   # enfile None pour définir que la file est finie
 
 Les messages proactifs sont affichés avec un séparateur visuel distinct pour ne pas se mélanger avec le prompt `Toi :` en cours de saisie.
 
----
+## 5. Modules externes
 
-### 5.6 `OllamaClient`
+Ces modules sont vitaux au bon fonctionnement du projet, mais peuvent être remplaçables très facilement tant que les nouveaux modules intègrent exactement les mêmes fonctionnalités.
+
+### 5.1 `OllamaClient`
 
 **Rôle** : implémentation de `BaseLLMClient` pour Ollama. Gère les sorties texte libre et les sorties structurées Pydantic.
 
-```python
-# Sortie texte libre
-response: str = llm.send(messages=[...], system_prompt="...")
-
-# Sortie structurée Pydantic
-response: EventDetectorOutput = llm.send(
-    messages=[...],
-    output_model=EventDetectorOutput   # injecte le JSON schema via format=
-)
-```
-
 Le modèle par défaut est `gemma4:31b-cloud`, paramétrable dans `config.yaml`.
+
+Une connexion par une autre IA comme Claude / ChatGPT peut aussi très bien faire l'affaire.
 
 ---
 
-### 5.7 `Database`
+### 5.2 `Database`
 
 **Rôle** : Connexion à la base de données et initialisation via variables d'environnement (`.env`).
 
@@ -181,9 +174,15 @@ Le modèle par défaut est `gemma4:31b-cloud`, paramétrable dans `config.yaml`.
 
 Variables d'environnement requises : `BD_USER`, `BD_MDP`, `BD_HOST`, `BD_NOM`, `BD_PORT`.
 
+On peut ici être en mesure d'utiliser d'autres outils de stockage des données comme un JSON, une base de données vectorielle ou encore un graphe de connaissances au lieu d'une simple base de données.
+
+### 5.3 Classes de données
+
+Le fichier `data.dataclasses.py` contient toutes les classes qui elles mêmes contiennent les méthodes permettant d'utiliser la base de données. Afin de garantir le bon fonctionnement du projet, il est nécessaire des les réimplémenter en fonction du modèle de stockage de données utilisé. 
+
 ---
 
-## 6. Modèles de données
+## 6. Modèles de données `data.projectTypes.py`
 
 ### 6.1 Types LLM — sorties structurées (héritage via `BaseModel`)
 
@@ -233,23 +232,23 @@ MLT (<u>ID_MLT</u>, Nombre_Echanges, Humeur_Generale, Themes_Abordes, Centres_In
 
 MCT (<u>ID_MCT</u>, Date_Creation, **ID_Profil**, Sujet, Intention, Evenements_Mentionnes, Resume_Reponse, Entites_Mentionnees, Langage, Tags)
 
+## Mémoire du Compagnon Virtuel
+
 ### 7.1 Mémoire Court Terme (MCT)
 
-**Portée** : session courante (journée en cours, `DATE(Date_Creation) = aujourd'hui`).
+**Portée** : session courante. Ici, une session courante = une exécution du programme. Cependant, dans un cadre idéal, une session courante pourrait être une journée. Ainsi, le soir, le Compagnon Virtuel rentre en phase de "réorganisation des données".
 
-**Contenu** : après chaque échange, un appel LLM génère un résumé structuré (`ResumeMCTOutput`) stocké en BDD. Ce résumé contient le sujet, l'intention de l'utilisateur, les entités mentionnées, les événements, les tags, et un résumé de la réponse du compagnon.
+**Contenu** : après chaque échange, un appel LLM génère un résumé structuré (`ResumeMCTOutput`) stocké en BDD. Ce résumé contient le sujet, l'intention de l'utilisateur, les entités mentionnées (entités = Noms / Lieux / Animaux / etc...), les événements, les tags (mots clés de la conversation), et un résumé de la réponse du compagnon.
 
-**Filtrage sémantique** : avant injection dans le prompt système, `recup_MCT_pertinente()` calcule la similarité cosinus entre le message courant et chaque entrée MCT (champ `resume_reponse`) via spaCy `fr_core_news_md`. Seules les entrées dépassant le seuil de **0.6** sont injectées.
+**Filtrage sémantique** : avant injection dans le prompt système, `recup_MCT_pertinente()` calcule la similarité cosinus entre le message courant et chaque entrée MCT (champ `resume_reponse`) via spaCy. Seules les entrées dépassant le seuil de **0.6** sont injectées.
 
 **Cycle de vie** : la MCT est vidée (`DonneesMCT.vider()`) lors de la sauvegarde MLT en fin de session.
 
 ### 7.2 Mémoire Long Terme (MLT)
 
-**Portée** : persistante entre les sessions.
+**Portée** : persistante. N'est jamais censée se supprimer.
 
-**Contenu** : à la déconnexion (`sauvegarder_MLT()`), toute la MCT du jour est résumée par le LLM (`ResumeMLTOutput`) et stockée comme une entrée MLT structurée (humeur générale, thèmes, centres d'intérêts, événements mentionnés, résumé narratif).
-
-**Injection dans le prompt** : la totalité de la MLT est injectée dans le system prompt, sans filtrage sémantique.
+**Contenu** : à la déconnexion (`sauvegarder_MLT()`), toute la MCT du jour est résumée par le LLM (via le type structuré `ResumeMLTOutput`) et stockée comme une entrée MLT structurée (humeur générale, thèmes, centres d'intérêts, événements mentionnés, résumé).
 
 > **Fonctionnalité souhaitée mais non implémentée** : contrairement à la MCT, la MLT n'est pas filtrée sémantiquement avant injection. Toutes les entrées passées sont envoyées au LLM, ce qui peut surcharger le contexte. ComPeer résout ce problème par une vectorisation des données afin de pouvoir faire un calcul de similarité cosine. Cependant, cela implique que chaque donnée de notre mémoire long terme soit "vectorisée". L'ajout d'un filtrage MLT par `sentence-transformers` semble être la meilleure approche pour avoir un filtrage pertinent de la mémoire long terme.
 
